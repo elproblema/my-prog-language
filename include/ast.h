@@ -18,13 +18,16 @@ public:
 
 // Associated with expression that consists of constant
 class ConstNode : public Node {
+    using value_type = std::variant<long long, long double, char>;
     // There "value" is semantic value of constant expression
-    std::variant<long long, long double, char> value;
+    value_type value;
 
   public:
     ConstNode(long long x): value(x) {}
     ConstNode(long double x): value(x) {}
     ConstNode(char c): value(c) {}
+
+    const value_type& GetValue() { return value; }
 
     ~ConstNode() = default;
 };
@@ -67,6 +70,7 @@ class VarNode : public Node {
   
   public:
     VarNode(std::string name): name(name) {}
+    const std::string& GetName() const { return name; }
 };
 
 // Stands for lambda abstraction expression
@@ -75,6 +79,7 @@ class LambdaNode : public VarNode {
   
   public:
     LambdaNode(VarNode&& var, Node* body): VarNode(var), body(body) {}  
+    const Node* GetBody() const { return body; }
 };
 
 // Stands for application expression
@@ -84,4 +89,6 @@ class AppNode : public Node {
 
   public:
     AppNode(Node* func, Node* arg): func(func), arg(arg) {}
+    const Node* GetFunc() const { return func; }
+    const Node* GetArg() const { return arg; }
 };

@@ -1,11 +1,12 @@
 %pointer
 %option noyywrap
-%option header-file="scanner.h"
+
 %{
     #include <ast.h>
     #include <parser.hpp>   
     #include <iostream>
-    #include <cstdio>
+    #include <cstring>
+    #include <cstdlib>
 %}
 
 INT     -?([0-9])|([1-9][0-9]*)
@@ -22,12 +23,16 @@ SINGLE_QUOTE \\\'
 
 \n
 
-({INT}?\.[0-9]+)|({INT}\.[0-9]*) { // float constant
+" "
 
+({INT}?"."[0-9]+)|({INT}"."[0-9]*) {
+    yylval = new ConstNode(.0L);
+    return FLOAT;
 }
 
 {INT} { // integer constant
     yylval = new ConstNode(atoll(yytext));
+    return INT;
 }
 
 \'{NEWLINE}\' {
@@ -60,7 +65,7 @@ SINGLE_QUOTE \\\'
     return ADD;
 }
 
-- {
+"-" {
     yylval = new SubNode();
     return SUB;
 }
@@ -70,7 +75,7 @@ SINGLE_QUOTE \\\'
     return DIV;
 }
 
-% {
+"%" {
     yylval = new RemNode();
     return REM;
 }

@@ -1,8 +1,9 @@
 %{
   #include <iostream>
   #include <ast.h>
+
   void yyerror(Node*, char const *);
-  int yylex(void);
+  int yylex(void);  
 %}
 
 %code requires {
@@ -43,6 +44,7 @@
 %nterm NON_APP_EXPR
 
 %start PROG
+%right '.'
 
 %% /* Grammar rules and actions follow. */
 
