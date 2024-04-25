@@ -1,5 +1,5 @@
 #pragma once
-
+#include <iostream>
 #include <vector>
 #include <string>
 #include <variant>
@@ -9,10 +9,19 @@ class Node; // Node instance associated with some lambda expression
 class VarNode; // This node stands for variable expression
 
 class Node {
+  protected:
     std::vector<VarNode*> free_var;
+    size_t depth;
 
-public:
-    Node() = default;
+  public:
+    size_t GetDepth() const { 
+      return depth; 
+    }
+    const std::vector<VarNode*>& GetFreeVar() { 
+      return free_var; 
+    }
+
+    Node(): depth(0), free_var() {}
     virtual ~Node() = default;
 };
 
@@ -64,13 +73,19 @@ class GetFloatNode : public BIFNode {};
 
 class GetCharNode : public BIFNode {};
 
+class LambdaNode;
+
 // Stands for "[ID]" expression, where ID is just identificator
 class VarNode : public Node {
-    std::string name; 
+  protected:
+    std::string name;
+    LambdaNode* head; // pointer to LambdaNode that this variable
   
   public:
-    VarNode(std::string name): name(name) {}
+    VarNode(std::string name);
     const std::string& GetName() const { return name; }
+
+  friend class LambdaNode;
 };
 
 // Stands for lambda abstraction expression
@@ -78,8 +93,10 @@ class LambdaNode : public VarNode {
     Node* body;    
   
   public:
-    LambdaNode(VarNode&& var, Node* body): VarNode(var), body(body) {}  
+    LambdaNode(VarNode&& var, Node* body);
     const Node* GetBody() const { return body; }
+
+  friend class VarNode;
 };
 
 // Stands for application expression
@@ -88,7 +105,7 @@ class AppNode : public Node {
     Node* arg; // right expression
 
   public:
-    AppNode(Node* func, Node* arg): func(func), arg(arg) {}
+    AppNode(Node* func, Node* arg);
     const Node* GetFunc() const { return func; }
     const Node* GetArg() const { return arg; }
 };

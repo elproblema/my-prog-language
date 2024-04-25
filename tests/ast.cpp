@@ -84,12 +84,12 @@ void unset_map() {
 
 // ################## FIXTURES #####################
 
-struct ast_alldebug : public testing::Test {
+struct ast_nondebug : public testing::Test {
     Node* root;
 
     void SetUp() {
-        yydebug = 1;
-        yy_flex_debug = 1;
+        yydebug = 0;
+        yy_flex_debug = 0;
         set_map();
     }
 
@@ -97,12 +97,14 @@ struct ast_alldebug : public testing::Test {
     }
 };
 
-struct ast_nondebug : public testing::Test {
+//all fixtures above used for debuging convinience
+
+struct ast_alldebug : public testing::Test {
     Node* root;
 
     void SetUp() {
-        yydebug = 0;
-        yy_flex_debug = 0;
+        yydebug = 1;
+        yy_flex_debug = 1;
         set_map();
     }
 
@@ -152,14 +154,45 @@ TEST_F(ast_nondebug, variable) {
     VarNode* new_root = dynamic_cast<VarNode*>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(new_root->GetName(), "x");
+    ASSERT_EQ(new_root->GetDepth(), 0);
+    ASSERT_EQ(new_root->GetFreeVar().size(), 1);
 }
 
-TEST_F(ast_nondebug, constant) {
+TEST_F(ast_nondebug, constant_int) {
     make_sample("5");
     ASSERT_EQ(yyparse(root), 0);
     ConstNode* new_root = dynamic_cast<ConstNode*>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(5LL, std::get<0>(new_root->GetValue()));
+    ASSERT_EQ(new_root->GetDepth(), 0);
+    ASSERT_EQ(new_root->GetFreeVar().size(), 0);
+}
+
+TEST_F(ast_nondebug, constant_float) {
+    make_sample(".6");
+    ASSERT_EQ(yyparse(root), 0);
+    ConstNode* new_root = dynamic_cast<ConstNode*>(root);
+    ASSERT_NE(new_root, nullptr);
+    ASSERT_EQ(0.6L, std::get<1>(new_root->GetValue()));
+    ASSERT_EQ(new_root->GetDepth(), 0);
+    ASSERT_EQ(new_root->GetFreeVar().size(), 0);
+}
+
+TEST_F(ast_nondebug, constant_char) {
+    make_sample("\'\\\'"); // this is just '\' string
+    ASSERT_EQ(yyparse(root), 0);
+    ConstNode* new_root = dynamic_cast<ConstNode*>(root);
+    ASSERT_NE(new_root, nullptr);
+    ASSERT_EQ('\\', std::get<2>(new_root->GetValue()));
+    ASSERT_EQ(new_root->GetDepth(), 0);
+    ASSERT_EQ(new_root->GetFreeVar().size(), 0);
+}
+
+TEST_F(ast_nondebug, free_var_check) {
+    make_sample("x y z");
+    ASSERT_EQ(yyparse(root), 0);
+    ASSERT_EQ(root->GetFreeVar().size(), 3);
+    ASSERT_EQ(root->GetDepth(), 2);
 }
 
 TEST_F(ast_nondebug, plus) {
@@ -167,6 +200,8 @@ TEST_F(ast_nondebug, plus) {
     ASSERT_EQ(yyparse(root), 0);
     AddNode* new_root = dynamic_cast<AddNode*>(root);
     ASSERT_NE(new_root, nullptr);
+    ASSERT_EQ(new_root->GetDepth(), 0);
+    ASSERT_EQ(new_root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, identity) {
@@ -176,6 +211,8 @@ TEST_F(ast_nondebug, identity) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 1);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, x_plus_y) {
@@ -185,6 +222,8 @@ TEST_F(ast_nondebug, x_plus_y) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 2);
+    ASSERT_EQ(root->GetFreeVar().size(), 2);
 }
 
 TEST_F(ast_nondebug, plus_func) {
@@ -194,6 +233,8 @@ TEST_F(ast_nondebug, plus_func) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 4);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, const_plus) {
@@ -203,6 +244,8 @@ TEST_F(ast_nondebug, const_plus) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 2);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, double_combinator) {
@@ -212,6 +255,8 @@ TEST_F(ast_nondebug, double_combinator) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 3);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, double_combinator_if_no_parenthesis) {
@@ -221,6 +266,8 @@ TEST_F(ast_nondebug, double_combinator_if_no_parenthesis) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 4);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
 TEST_F(ast_nondebug, y_combinator) {
@@ -230,4 +277,6 @@ TEST_F(ast_nondebug, y_combinator) {
     ASSERT_EQ(yyparse(root), 0);
     Tree* real_root = new Tree(real_tree, start);
     real_root->check(real_root, root);
+    ASSERT_EQ(root->GetDepth(), 5);
+    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }

@@ -26,7 +26,7 @@ SINGLE_QUOTE \\\'
 " "
 
 ({INT}?"."[0-9]+)|({INT}"."[0-9]*) {
-    yylval = new ConstNode(.0L);
+    yylval = new ConstNode(.0L); // not implemented yet
     return FLOAT;
 }
 

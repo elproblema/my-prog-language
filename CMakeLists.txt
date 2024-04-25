@@ -14,13 +14,8 @@ FLEX_TARGET(scanner flex+bison/lexer.l "${CMAKE_BINARY_DIR}/scanner.cpp" COMPILE
 BISON_TARGET(parser flex+bison/parser.y "${CMAKE_BINARY_DIR}/parser.cpp" COMPILE_FLAGS "-t --verbose" DEFINES_FILE parser.hpp)
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 
-#FLEX_TARGET(scanner flex+bison/lexer.l "${CMAKE_BINARY_DIR}/test/scanner.cpp" DEFINES_FILE scanner.hpp)
-#BISON_TARGET(parser flex+bison/parser.y "${CMAKE_BINARY_DIR}/test/parser.cpp" DEFINES_FILE parser.hpp)
-#ADD_FLEX_BISON_DEPENDENCY(scanner parser)
-
 add_library(grammar ${FLEX_scanner_OUTPUTS} ${BISON_parser_OUTPUTS})
-#add_library(test_grammar ${FLEX_test_scanner_OUTPUTS} ${BISON_test_parser_OUTPUTS})
-
+add_library(ast include/ast.h source/bound.cpp)
 
 ################################
 # GTest
@@ -37,6 +32,7 @@ include_directories(${GTEST_INCLUDE_DIR})
 add_executable(tests tests/ast.cpp)
 target_link_libraries(tests GTest::gtest_main)
 target_link_libraries(tests grammar)
+target_link_libraries(tests ast)
 
 include(GoogleTest)
 gtest_discover_tests(tests)
