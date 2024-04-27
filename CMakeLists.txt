@@ -15,7 +15,7 @@ BISON_TARGET(parser flex+bison/parser.y "${CMAKE_BINARY_DIR}/parser.cpp" COMPILE
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 
 add_library(grammar ${FLEX_scanner_OUTPUTS} ${BISON_parser_OUTPUTS})
-add_library(ast include/ast.h source/bound.cpp)
+add_library(ast include/ast.h include/SC.h source/ast.cpp source/SC.cpp)
 
 ################################
 # GTest

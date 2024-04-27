@@ -2,7 +2,7 @@
   #include <iostream>
   #include <ast.h>
 
-  void yyerror(Node*, char const *);
+  void yyerror(std::shared_ptr<Node>, char const *);
   int yylex(void);  
 %}
 
@@ -13,8 +13,8 @@
   int yylex(void);
 }
 
-%define api.value.type {Node*}
-%parse-param {Node*& root}
+%define api.value.type {std::shared_ptr<Node>}
+%parse-param {std::shared_ptr<Node>& root}
 
 %token INT
 %token FLOAT
@@ -70,21 +70,28 @@ NON_APP_EXPR:
 | GET_CHAR
 | LAMBDA VAR '.' EXPR 
 {
-  $$ = new LambdaNode(std::move(dynamic_cast<VarNode&>(*$2)), $4);
-  delete $2;
+  $$ = std::make_shared<LambdaNode>(std::move(dynamic_cast<VarNode&>(*$2)), $4);
+  $$->SetLoc($1);
 }
-| '(' EXPR ')' { $$ = $2; }
+| '(' EXPR ')' 
+{ 
+  $$ = $2;
+  $$->SetLoc($1);
+}
 
 EXPR:
   NON_APP_EXPR
-| EXPR NON_APP_EXPR { $$ = new AppNode{$1, $2}; }
+| EXPR NON_APP_EXPR { 
+    $$ = std::make_shared<AppNode>($1, $2);
+    $$->SetLoc($1); 
+}
 
 PROG:
   EXPR { root = $1; }
 
 %%
 
-void yyerror (Node*, char const *s)
+void yyerror (std::shared_ptr<Node>, char const *s)
 {
   fprintf (stderr, "error");
 }

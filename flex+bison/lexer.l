@@ -1,5 +1,6 @@
 %pointer
 %option noyywrap
+%option yylineno
 
 %{
     #include <ast.h>
@@ -7,6 +8,12 @@
     #include <iostream>
     #include <cstring>
     #include <cstdlib>
+    #include <memory>
+
+    static int yy_next_column = 1;
+    int yycolumn = 1;
+
+    #define HANDLE_COLUMN yycolumn = yy_next_column; yy_next_column += strlen(yytext)
 %}
 
 INT     -?([0-9])|([1-9][0-9]*)
@@ -19,120 +26,159 @@ SINGLE_QUOTE \\\'
 
 %%
 
-\t
+\t {HANDLE_COLUMN;}
 
-\n
+\n {HANDLE_COLUMN; yy_next_column = 1;}
 
-" "
+" " {HANDLE_COLUMN;}
 
 ({INT}?"."[0-9]+)|({INT}"."[0-9]*) {
-    yylval = new ConstNode(.0L); // not implemented yet
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>(.0L); // not implemented yet
     return FLOAT;
 }
 
 {INT} { // integer constant
-    yylval = new ConstNode(atoll(yytext));
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>(atoll(yytext));
     return INT;
 }
 
 \'{NEWLINE}\' {
-    yylval = new ConstNode('\n');
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>('\n');
     return CHAR;
 }
 
 \'{BACKSLASH}\' {
-    yylval = new ConstNode('\\');
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>('\\');
     return CHAR;
 }
 
 \'{SINGLE_QUOTE}\' {
-    yylval = new ConstNode('\'');
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>('\'');
     return CHAR;
 }
 
 \'{HOR_TAB}\' {
-    yylval = new ConstNode('\t');
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>('\t');
     return CHAR;
 }
 
 \'.\' { // letter char
-    yylval = new ConstNode(yytext[1]);
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConstNode>(yytext[1]);
     return CHAR;
 }
 
 "+" { 
-    yylval = new AddNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<AddNode>();
     return ADD;
 }
 
 "-" {
-    yylval = new SubNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<SubNode>();
     return SUB;
 }
 
 "/" {
-    yylval = new DivNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<DivNode>();
     return DIV;
 }
 
 "%" {
-    yylval = new RemNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<RemNode>();
     return REM;
 }
 
 "*" {
-    yylval = new MulNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<MulNode>();
     return MUL;
 }
 
 CONS {
-    yylval = new ConsNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<ConsNode>();
     return CONS;
 }
 
 HEAD {
-    yylval = new HeadNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<HeadNode>();
     return HEAD;
 }
 
 TAIL {
-    yylval = new TailNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<TailNode>();
     return TAIL;
 }
 
 PRINT {
-    yylval = new PrintNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<PrintNode>();
     return PRINT;
 }
 
 GET_INT {
-    yylval = new GetIntNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<GetIntNode>();
     return GET_INT;
 }
 
 GET_FLOAT {
-    yylval = new GetFloatNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<GetFloatNode>();
     return GET_FLOAT;
 }
 
 GET_CHAR {
-    yylval = new GetCharNode();
+    HANDLE_COLUMN;
+    yylval = std::make_shared<GetCharNode>();
     return GET_CHAR;
 }
 
-@ { return LAMBDA; }
+@ {
+    HANDLE_COLUMN;
+    yylval = std::make_shared<Node>();
+    return LAMBDA; 
+}
 
-"." { return '.'; }
+"." { 
+    HANDLE_COLUMN; 
+    yylval = std::make_shared<Node>();
+    return '.'; 
+}
 
-"(" { return '('; }
+"(" { 
+    HANDLE_COLUMN; 
+    yylval = std::make_shared<Node>();
+    return '('; 
+}
 
-")" { return ')'; }
+")" { 
+    HANDLE_COLUMN; 
+    yylval = std::make_shared<Node>();
+    return ')'; 
+}
 
 [a-zA-Z_]+[0-9]* { 
-    yylval = new VarNode(yytext);
+    HANDLE_COLUMN;
+    yylval = std::make_shared<VarNode>(yytext);
     return VAR;
 }
 
-. { std::cerr << "Unrecognized charachter\n"; }
+. { 
+    HANDLE_COLUMN;
+    std::cerr << "Unrecognized token\n"; 
+}
 
 %%

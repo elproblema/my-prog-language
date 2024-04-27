@@ -9,11 +9,11 @@
 struct Tree;
 extern int yy_flex_debug;
 
-std::map<char, std::function<void(Tree*, const Node*)>> char_map_func;
+std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func;
 
 struct Tree {
-    std::function<void(Tree*, const Node*)> check;
-    std::vector<Tree*> children;
+    std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)> check;
+    std::vector<std::shared_ptr<Tree>> children;
 
     Tree(std::string& format, size_t& start) {
         size_t n = format.size();
@@ -24,7 +24,7 @@ struct Tree {
         ++start;
         while (format[start] == '(' && start < n) {
             ++start;
-            children.push_back(new Tree(format, start));
+            children.push_back(std::make_shared<Tree>(format, start));
         }
         if (format[start] == ')') { 
             ++start;
@@ -43,36 +43,36 @@ void make_sample(const char* s) {
 
 void set_map() {
     char_map_func = {
-        {'@', [](Tree* vertex, const Node* opp_vertex) -> void { 
-            const AppNode* opp_cast = dynamic_cast<const AppNode*>(opp_vertex);
+        {'@', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
+            std::shared_ptr<const AppNode> opp_cast = std::dynamic_pointer_cast<const AppNode>(opp_vertex);
             ASSERT_NE(opp_cast, nullptr);
             ASSERT_EQ(vertex->children.size(), 2); 
-            Tree* func = vertex->children[0];
-            Tree* arg = vertex->children[1];
-            const Node* func_opp = opp_cast->GetFunc();
-            const Node* arg_opp = opp_cast->GetArg();
+            std::shared_ptr<Tree> func = vertex->children[0];
+            std::shared_ptr<Tree> arg = vertex->children[1];
+            std::shared_ptr<const Node> func_opp = opp_cast->GetFunc();
+            std::shared_ptr<const Node> arg_opp = opp_cast->GetArg();
             func->check(func, func_opp); 
             arg->check(arg, arg_opp);
         }},
-        {'V', [](Tree* vertex, const Node* opp_vertex) -> void { 
-            ASSERT_NE(dynamic_cast<const VarNode*>(opp_vertex), nullptr); 
+        {'V', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
+            ASSERT_NE(std::dynamic_pointer_cast<const VarNode>(opp_vertex), nullptr); 
             ASSERT_EQ(vertex->children.size(), 0); 
 
         }},
-        {'*', [](Tree* vertex, const Node* opp_vertex) -> void { 
-            ASSERT_NE(dynamic_cast<const BIFNode*>(opp_vertex), nullptr); 
+        {'*', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
+            ASSERT_NE(std::dynamic_pointer_cast<const BIFNode>(opp_vertex), nullptr); 
             ASSERT_EQ(vertex->children.size(), 0); 
         }},
-        {'C', [](Tree* vertex, const Node* opp_vertex) -> void { 
-            ASSERT_NE(dynamic_cast<const ConstNode*>(opp_vertex), nullptr); 
+        {'C', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
+            ASSERT_NE(std::dynamic_pointer_cast<const ConstNode>(opp_vertex), nullptr); 
             ASSERT_EQ(vertex->children.size(), 0); 
         }},
-        {'#', [](Tree* vertex, const Node* opp_vertex) -> void { 
-            const LambdaNode* opp_cast = dynamic_cast<const LambdaNode*>(opp_vertex);
+        {'#', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
+            std::shared_ptr<const LambdaNode> opp_cast = std::dynamic_pointer_cast<const LambdaNode>(opp_vertex);
             ASSERT_NE(opp_cast, nullptr); 
             ASSERT_EQ(vertex->children.size(), 1); 
-            Tree* body = vertex->children[0];
-            const Node* body_opp = opp_cast->GetBody();
+            std::shared_ptr<Tree> body = vertex->children[0];
+            std::shared_ptr<const Node> body_opp = opp_cast->GetBody();
             body->check(body, body_opp); 
         }}
     };
@@ -82,10 +82,10 @@ void unset_map() {
     char_map_func = {};
 }
 
-// ################## FIXTURES #####################
+// ####################### FIXTURES ##########################
 
 struct ast_nondebug : public testing::Test {
-    Node* root;
+    std::shared_ptr<Node> root;
 
     void SetUp() {
         yydebug = 0;
@@ -97,10 +97,10 @@ struct ast_nondebug : public testing::Test {
     }
 };
 
-//all fixtures above used for debuging convinience
+//all fixtures below are used for debuging convinience
 
 struct ast_alldebug : public testing::Test {
-    Node* root;
+    std::shared_ptr<Node> root;
 
     void SetUp() {
         yydebug = 1;
@@ -113,7 +113,7 @@ struct ast_alldebug : public testing::Test {
 };
 
 struct ast_flexdebug : public testing::Test {
-    Node* root;
+    std::shared_ptr<Node> root;
 
     void SetUp() {
         yydebug = 0;
@@ -126,7 +126,7 @@ struct ast_flexdebug : public testing::Test {
 };
 
 struct ast_bisondebug : public testing::Test {
-    Node* root;
+    std::shared_ptr<Node> root;
 
     void SetUp() {
         yydebug = 1;
@@ -138,10 +138,7 @@ struct ast_bisondebug : public testing::Test {
     }
 };
 
-
-// ################## TESTS #####################
-
-
+//######################### TESTS ############################
 
 TEST_F(ast_nondebug, error) {
     make_sample("@@");
@@ -151,7 +148,7 @@ TEST_F(ast_nondebug, error) {
 TEST_F(ast_nondebug, variable) {
     make_sample("x");
     ASSERT_EQ(yyparse(root), 0);
-    VarNode* new_root = dynamic_cast<VarNode*>(root);
+    std::shared_ptr<VarNode> new_root = std::dynamic_pointer_cast<VarNode>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(new_root->GetName(), "x");
     ASSERT_EQ(new_root->GetDepth(), 0);
@@ -161,7 +158,7 @@ TEST_F(ast_nondebug, variable) {
 TEST_F(ast_nondebug, constant_int) {
     make_sample("5");
     ASSERT_EQ(yyparse(root), 0);
-    ConstNode* new_root = dynamic_cast<ConstNode*>(root);
+    std::shared_ptr<ConstNode> new_root = std::dynamic_pointer_cast<ConstNode>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(5LL, std::get<0>(new_root->GetValue()));
     ASSERT_EQ(new_root->GetDepth(), 0);
@@ -171,7 +168,7 @@ TEST_F(ast_nondebug, constant_int) {
 TEST_F(ast_nondebug, constant_float) {
     make_sample(".6");
     ASSERT_EQ(yyparse(root), 0);
-    ConstNode* new_root = dynamic_cast<ConstNode*>(root);
+    std::shared_ptr<ConstNode> new_root = std::dynamic_pointer_cast<ConstNode>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(0.6L, std::get<1>(new_root->GetValue()));
     ASSERT_EQ(new_root->GetDepth(), 0);
@@ -181,7 +178,7 @@ TEST_F(ast_nondebug, constant_float) {
 TEST_F(ast_nondebug, constant_char) {
     make_sample("\'\\\'"); // this is just '\' string
     ASSERT_EQ(yyparse(root), 0);
-    ConstNode* new_root = dynamic_cast<ConstNode*>(root);
+    std::shared_ptr<ConstNode> new_root = std::dynamic_pointer_cast<ConstNode>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ('\\', std::get<2>(new_root->GetValue()));
     ASSERT_EQ(new_root->GetDepth(), 0);
@@ -198,7 +195,7 @@ TEST_F(ast_nondebug, free_var_check) {
 TEST_F(ast_nondebug, plus) {
     make_sample("+");
     ASSERT_EQ(yyparse(root), 0);
-    AddNode* new_root = dynamic_cast<AddNode*>(root);
+    std::shared_ptr<AddNode> new_root = std::dynamic_pointer_cast<AddNode>(root);
     ASSERT_NE(new_root, nullptr);
     ASSERT_EQ(new_root->GetDepth(), 0);
     ASSERT_EQ(new_root->GetFreeVar().size(), 0);
@@ -209,7 +206,7 @@ TEST_F(ast_nondebug, identity) {
     std::string real_tree = "#(V)";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 1);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
@@ -220,7 +217,7 @@ TEST_F(ast_nondebug, x_plus_y) {
     std::string real_tree = "@(@(*)(V))(V)";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 2);
     ASSERT_EQ(root->GetFreeVar().size(), 2);
@@ -231,7 +228,7 @@ TEST_F(ast_nondebug, plus_func) {
     std::string real_tree = "#(#(@(@(*)(V))(V)))";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 4);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
@@ -242,7 +239,7 @@ TEST_F(ast_nondebug, const_plus) {
     std::string real_tree = "@(@(*)(C))(C)";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 2);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
@@ -253,7 +250,7 @@ TEST_F(ast_nondebug, double_combinator) {
     std::string real_tree = "@(#(@(V)(V)))(#(@(V)(V)))";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 3);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
@@ -264,7 +261,7 @@ TEST_F(ast_nondebug, double_combinator_if_no_parenthesis) {
     std::string real_tree = "#(@(@(V)(V))(#(@(V)(V))))";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 4);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
@@ -275,7 +272,7 @@ TEST_F(ast_nondebug, y_combinator) {
     std::string real_tree = "#(@(#(@(V)(@(V)(V))))(#(@(V)(@(V)(V)))))";
     size_t start = 0;
     ASSERT_EQ(yyparse(root), 0);
-    Tree* real_root = new Tree(real_tree, start);
+    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
     real_root->check(real_root, root);
     ASSERT_EQ(root->GetDepth(), 5);
     ASSERT_EQ(root->GetFreeVar().size(), 0);
