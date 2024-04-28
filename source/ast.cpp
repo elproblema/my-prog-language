@@ -36,10 +36,6 @@ AppNode::AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg): func(fu
     std::back_inserter(free_var));
 }
 
-std::shared_ptr<LambdaNode> LambdaNode::shared_from_this() {
-    return std::dynamic_pointer_cast<LambdaNode>(shared_from_this());
-}
-
 VarNode::VarNode(std::string name): name(name) {
     free_var = {shared_from_this()};
 }

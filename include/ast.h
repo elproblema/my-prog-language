@@ -1,4 +1,5 @@
 #pragma once
+
 #include <memory>
 #include <iostream>
 #include <vector>
@@ -11,7 +12,7 @@ extern int yylineno; // from flex
 class VarNode; // This node stands for variable expression
 
 // Node instance associated with some lambda expression
-class Node {
+class Node : public std::enable_shared_from_this<Node> {
 
 class Position {
     size_t line;
@@ -98,7 +99,12 @@ class GetCharNode : public BIFNode {};
 class LambdaNode;
 
 // Stands for "[ID]" expression, where ID is just identificator
-class VarNode : public std::enable_shared_from_this<VarNode>, public Node {
+class VarNode : public Node {
+    
+    std::shared_ptr<VarNode> shared_from_this() { 
+        return std::dynamic_pointer_cast<VarNode>(Node::shared_from_this());
+    }
+
   protected:
     std::string name;
     std::shared_ptr<LambdaNode> head; // pointer to LambdaNode that this variable
@@ -112,11 +118,15 @@ friend class LambdaNode;
 
 // Stands for lambda abstraction expression
 class LambdaNode : public VarNode {
+
+    std::shared_ptr<LambdaNode> shared_from_this() { 
+        return std::dynamic_pointer_cast<LambdaNode>(Node::shared_from_this());
+    }
+
   protected:
     std::shared_ptr<Node> body;   
     std::vector<std::shared_ptr<VarNode>> bonded;
-
-    std::shared_ptr<LambdaNode> shared_from_this();
+    
   public:
     LambdaNode(VarNode&& var, std::shared_ptr<Node> body);
     std::shared_ptr<const Node> GetBody() const { return body; }
@@ -130,8 +140,15 @@ class AppNode : public Node {
     std::shared_ptr<Node> func; // left expression
     std::shared_ptr<Node> arg; // right expression
 
+    std::shared_ptr<AppNode> shared_from_this() { 
+        return std::dynamic_pointer_cast<AppNode>(Node::shared_from_this());
+    }
+
   public:
     AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg);
     std::shared_ptr<const Node> GetFunc() const { return func; }
+    std::shared_ptr<Node> GetFunc() { return func; }
     std::shared_ptr<const Node> GetArg() const { return arg; }
+    std::shared_ptr<Node> GetArg() { return arg; }
+
 };
