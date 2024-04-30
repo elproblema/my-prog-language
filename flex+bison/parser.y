@@ -53,7 +53,7 @@ NON_APP_EXPR:
 | FLOAT
 | CHAR 
 
-| VAR
+| VAR 
 
 | ADD
 | SUB
@@ -80,7 +80,7 @@ NON_APP_EXPR:
 }
 
 EXPR:
-  NON_APP_EXPR
+  NON_APP_EXPR 
 | EXPR NON_APP_EXPR { 
     $$ = std::make_shared<AppNode>($1, $2);
     $$->SetLoc($1); 

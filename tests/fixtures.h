@@ -1,62 +1,41 @@
 #pragma once
 
 #include <gtest/gtest.h>
+
+#include <fstream>
+
 #include <parser.hpp>
 #include <scanner.hpp>
-#include "tree.h"
+#include "help.h"
 
 // ####################### FIXTURES ##########################
 
-struct ast_nondebug : public testing::Test {
+//fixtures below are used for debuging convinience
+
+struct ast : public testing::Test {
+  private:
+    bool setup = false; 
+    bool teardown = false;
+
+  public:
+    size_t start = 0;
     std::shared_ptr<Node> root;
+    std::shared_ptr<Tree> real_root;
+    std::vector<Base*> types;
+    std::string format;
 
     void SetUp() {
-        yydebug = 0;
-        yy_flex_debug = 0;
+        freopen("debug", "w", stderr);
         set_map();
-    }
-
-    void TearDown() {
-    }
-};
-
-//all fixtures below are used for debuging convinience
-
-struct ast_alldebug : public testing::Test {
-    std::shared_ptr<Node> root;
-
-    void SetUp() {
         yydebug = 1;
         yy_flex_debug = 1;
-        set_map();
     }
 
     void TearDown() {
-    }
-};
-
-struct ast_flexdebug : public testing::Test {
-    std::shared_ptr<Node> root;
-
-    void SetUp() {
-        yydebug = 0;
-        yy_flex_debug = 1;
-        set_map();
-    }
-
-    void TearDown() {
-    }
-};
-
-struct ast_bisondebug : public testing::Test {
-    std::shared_ptr<Node> root;
-
-    void SetUp() {
-        yydebug = 1;
-        yy_flex_debug = 0;
-        set_map();
-    }
-
-    void TearDown() {
+        if (testing::UnitTest::GetInstance()->Failed()) {
+            std::ifstream in("debug");
+            std::cerr << in.rdbuf();
+        }
+        for (auto ptr : types) delete ptr;
     }
 };

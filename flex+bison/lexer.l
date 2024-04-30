@@ -173,6 +173,7 @@ GET_CHAR {
 [a-zA-Z_]+[0-9]* { 
     HANDLE_COLUMN;
     yylval = std::make_shared<VarNode>(yytext);
+    yylval->SetFreeVar();
     return VAR;
 }
 

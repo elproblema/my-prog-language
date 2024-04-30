@@ -10,14 +10,14 @@ namespace rv = std::ranges::views;
 LambdaNode::LambdaNode(VarNode&& var, std::shared_ptr<Node> body): VarNode(std::move(var)), body(body) {
     free_var.clear();
     depth = body->GetDepth() + 1;
-    std::function<bool(std::shared_ptr<VarNode>)> bound = [this](std::shared_ptr<VarNode> var) { 
-        return var->GetName() == name; 
+    std::function<bool(std::weak_ptr<VarNode>)> bound = [this](std::weak_ptr<VarNode> var) { 
+        return var.lock()->GetName() == name; 
     };
-    std::function<bool(std::shared_ptr<VarNode>)> unbound = [this](std::shared_ptr<VarNode> var) { 
-        return var->GetName() != name; 
+    std::function<bool(std::weak_ptr<VarNode>)> unbound = [this](std::weak_ptr<VarNode> var) { 
+        return var.lock()->GetName() != name; 
     };
     for (auto var : body->GetFreeVar() | rv::filter(bound)) {
-        var->head = shared_from_this();
+        var.lock()->head = weak_from_this();
         bonded.push_back(var);
     }
     auto to_copy = body->GetFreeVar() | rv::filter(unbound);
@@ -36,6 +36,21 @@ AppNode::AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg): func(fu
     std::back_inserter(free_var));
 }
 
-VarNode::VarNode(std::string name): name(name) {
-    free_var = {shared_from_this()};
+VarNode::VarNode(std::string name): name(name) {}
+
+void VarNode::SetFreeVar() {
+    free_var = {weak_from_this()};
+}
+
+
+std::vector<std::shared_ptr<Node>> Node::GetChildren() {
+    return {};
+} 
+
+std::vector<std::shared_ptr<Node>> LambdaNode::GetChildren() {
+    return {body};
+}
+
+std::vector<std::shared_ptr<Node>> AppNode::GetChildren() {
+    return {func, arg};
 }

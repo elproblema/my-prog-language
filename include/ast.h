@@ -6,10 +6,11 @@
 #include <string>
 #include <variant>
 
-extern int yycolumn;
-extern int yylineno; // from flex
+// from flex
+extern int yycolumn; 
+extern int yylineno; 
 
-class VarNode; // This node stands for variable expression
+class VarNode; 
 
 // Node instance associated with some lambda expression
 class Node : public std::enable_shared_from_this<Node> {
@@ -25,24 +26,41 @@ class Position {
 };
 
   protected:
-    std::vector<std::shared_ptr<VarNode>> free_var;
+    std::vector<std::weak_ptr<VarNode>> free_var;
     size_t depth;
     Position loc; // location of the beginning of the expression
 
+
   public:
-    size_t GetDepth() const { 
-      return depth; 
-    }
-
-    const std::vector<std::shared_ptr<VarNode>>& GetFreeVar() { 
-      return free_var; 
-    }
-
-    void SetLoc(std::shared_ptr<Node> first) {
-      loc = first->loc;
-    }
-
     Node(): depth(0), free_var(), loc() {}
+
+    size_t GetDepth() const { return depth; }
+
+    const std::vector<std::weak_ptr<VarNode>>& GetFreeVar() const { return free_var; }
+
+    void SetLoc(std::shared_ptr<Node> first) { loc = first->loc; }
+
+    // Virtual functions
+
+    virtual std::vector<std::shared_ptr<Node>> GetChildren();
+
+    virtual std::shared_ptr<const Node> GetFunc() const { return nullptr; }
+    virtual std::shared_ptr<Node> GetFunc() { return nullptr; }
+
+    virtual std::shared_ptr<const Node> GetArg() const { return nullptr; }
+    virtual std::shared_ptr<Node> GetArg() { return nullptr; }
+
+    virtual std::shared_ptr<const Node> GetBody() const { return nullptr; }
+    virtual std::shared_ptr<Node> GetBody() { return nullptr; }
+
+    virtual void SetFreeVar() {}
+
+    const std::string& GetName() const { throw; }
+
+    virtual void Substitute();
+
+    // End of virtual functions
+
     virtual ~Node() = default;
 };
 
@@ -57,12 +75,14 @@ class ConstNode : public Node {
     ConstNode(long double x): value(x) {}
     ConstNode(char c): value(c) {}
 
-    const value_type& GetValue() { return value; }
+    const long long& GetLL() const { return std::get<long long>(value); }
+    const long double& GetLD() const { return std::get<long double>(value); }
+    const char& GetChar() const { return std::get<char>(value); }
 
     ~ConstNode() = default;
 };
 
-// This nodes stands for Built-In Functions (briefly BIF) like "+", "-", "CONS" etc.
+// This nodes associated with Built-In Functions (briefly BIF) like "+", "-", "CONS" etc.
 class BIFNode : public Node {};
 
 //Addition
@@ -98,44 +118,60 @@ class GetCharNode : public BIFNode {};
 
 class LambdaNode;
 
-// Stands for "[ID]" expression, where ID is just identificator
+// Associated with "[ID]" expression
 class VarNode : public Node {
     
     std::shared_ptr<VarNode> shared_from_this() { 
         return std::dynamic_pointer_cast<VarNode>(Node::shared_from_this());
     }
 
+    std::weak_ptr<VarNode> weak_from_this() {
+        return std::weak_ptr(shared_from_this());
+    }
+
   protected:
     std::string name;
-    std::shared_ptr<LambdaNode> head; // pointer to LambdaNode that this variable
+    std::weak_ptr<LambdaNode> head; // pointer to LambdaNode that has this variable
   
   public:
     VarNode(std::string name);
+    void SetFreeVar() override;
     const std::string& GetName() const { return name; }
 
 friend class LambdaNode;
 };
 
-// Stands for lambda abstraction expression
+// Associated with lambda abstraction expression
 class LambdaNode : public VarNode {
+    std::shared_ptr<Node> body;   
+    std::vector<std::weak_ptr<VarNode>> bonded;
 
     std::shared_ptr<LambdaNode> shared_from_this() { 
-        return std::dynamic_pointer_cast<LambdaNode>(Node::shared_from_this());
+        return std::dynamic_pointer_cast<LambdaNode>(VarNode::shared_from_this());
     }
 
-  protected:
-    std::shared_ptr<Node> body;   
-    std::vector<std::shared_ptr<VarNode>> bonded;
+    std::weak_ptr<LambdaNode> weak_from_this() {
+        return std::weak_ptr(shared_from_this());
+    }
     
   public:
     LambdaNode(VarNode&& var, std::shared_ptr<Node> body);
-    std::shared_ptr<const Node> GetBody() const { return body; }
+
+    std::shared_ptr<const Node> GetBody() const override { return body; }
+    std::shared_ptr<Node> GetBody() override { return body; }
+
+
+    std::vector<std::shared_ptr<Node>> GetChildren() override;
+
+
+    void Substitute() override;
+
 
 friend class VarNode;
 friend class SuperCombinator;
 };
 
-// Stands for application expression
+// Associated with application expression
 class AppNode : public Node {
     std::shared_ptr<Node> func; // left expression
     std::shared_ptr<Node> arg; // right expression
@@ -146,9 +182,12 @@ class AppNode : public Node {
 
   public:
     AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg);
+
     std::shared_ptr<const Node> GetFunc() const { return func; }
     std::shared_ptr<Node> GetFunc() { return func; }
+
     std::shared_ptr<const Node> GetArg() const { return arg; }
     std::shared_ptr<Node> GetArg() { return arg; }
 
+    std::vector<std::shared_ptr<Node>> GetChildren() override;
 };

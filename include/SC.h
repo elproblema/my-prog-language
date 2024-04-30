@@ -5,9 +5,10 @@
 // Super Combinators
 
 class SuperCombinator : public Node {
-  private:
-    std::vector<std::shared_ptr<VarNode>> some_vars;
+  protected:
+    std::vector<std::weak_ptr<VarNode>> some_vars;
     std::shared_ptr<Node> body;
+    std::string name;
 
     std::string create_name();
 
@@ -20,13 +21,18 @@ class SuperCombinator : public Node {
     std::shared_ptr<const SuperCombinator> shared_from_this() const { 
         return std::dynamic_pointer_cast<const SuperCombinator>(Node::shared_from_this());
     }
-
   public:
     SuperCombinator(LambdaNode);
+
+    SuperCombinator(std::shared_ptr<Node> body, std::string name): body(body), name(name) {}
+
+    std::shared_ptr<const Node> GetBody() const { return body; }
 
     static std::shared_ptr<Node> Substitution(std::shared_ptr<LambdaNode>);
 };
 
 using SC_container = std::vector<std::shared_ptr<SuperCombinator>>;
 
-SC_container GetFromAst(Node* root);
+static SC_container all_functions;
+
+SC_container GetFromAst(std::shared_ptr<Node> root);

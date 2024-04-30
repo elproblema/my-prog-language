@@ -2,20 +2,23 @@
 #include <ast.h>
 #include <iostream>
 #include <algorithm>
+#include <cassert>
 
-SuperCombinator::SuperCombinator(LambdaNode abs): Node(abs), body(abs.body) {
-    std::vector<std::shared_ptr<VarNode>> all_vars;
+#define SC SuperCombinator
+
+SC::SC(LambdaNode abs): Node(abs), body(abs.body), name(create_name()) {
+    std::vector<std::weak_ptr<VarNode>> all_vars;
     std::copy(abs.free_var.begin(), abs.free_var.end(), std::back_inserter(all_vars));
     std::copy(abs.bonded.begin(), abs.bonded.end(), std::back_inserter(all_vars));
 
     std::sort(all_vars.begin(), all_vars.end(), 
-    [] (std::shared_ptr<VarNode> lhs, std::shared_ptr<VarNode> rhs) {
-        return lhs->GetDepth() < rhs->GetDepth();
+    [] (std::weak_ptr<VarNode> lhs, std::weak_ptr<VarNode> rhs) {
+        return lhs.lock()->GetDepth() < rhs.lock()->GetDepth();
     });
 
     auto it = std::unique(all_vars.begin(), all_vars.end(), 
-    [] (std::shared_ptr<VarNode> lhs, std::shared_ptr<VarNode> rhs) {
-        return lhs->GetDepth() == rhs->GetDepth();
+    [] (std::weak_ptr<VarNode> lhs, std::weak_ptr<VarNode> rhs) {
+        return lhs.lock()->GetDepth() == rhs.lock()->GetDepth();
     });
 
     for (auto i = all_vars.begin(); i != it; ++it) {
@@ -32,18 +35,21 @@ std::string SuperCombinator::create_name() {
 // eta_conversion will return Z combinator in this case
 // otherwise this
 std::shared_ptr<SuperCombinator> SuperCombinator::eta_conversion()  {
+// sorry :)
+#define ret \
+all_functions.push_back(shared_from_this()); \
+return shared_from_this()
+
     std::shared_ptr<Node> begin = std::dynamic_pointer_cast<AppNode>(body);
     int i = some_vars.size() - 1;
 
     while (begin != nullptr && i >= 0)
     {
-        auto app = std::dynamic_pointer_cast<AppNode>(begin);
-        if (app == nullptr) return shared_from_this();
-        auto var = std::dynamic_pointer_cast<VarNode>(app->GetArg());
-        if (var == nullptr) return shared_from_this();
-        if (var->GetName() != some_vars[i]->GetName()) return shared_from_this();
+        auto var = begin->GetArg();
+        if (var == nullptr) ret;
+        if (var->GetName() != some_vars[i].lock()->GetName()) ret;
 
-        begin = app->GetFunc();
+        begin = begin->GetFunc();
         --i;   
     }
 
@@ -52,19 +58,32 @@ std::shared_ptr<SuperCombinator> SuperCombinator::eta_conversion()  {
     return func;
 }
 
-std::shared_ptr<Node> SuperCombinator::Substitution(std::shared_ptr<LambdaNode> abs) {
+std::shared_ptr<Node> SC::Substitution(std::shared_ptr<LambdaNode> abs) {
     auto comb = std::make_shared<SuperCombinator>(*abs);
     comb = comb->eta_conversion();
-    std::shared_ptr< Node> res = comb;
+    std::shared_ptr<Node> res = comb;
 
     int n = int(comb->some_vars.size()) - 1;
     for (int i = 0; i < n - 1; ++i) {
-        res = std::make_shared<AppNode>(res, comb->some_vars[i]);
+        res = std::make_shared<AppNode>(res, comb->some_vars[i].lock());
     }
 
     return res;
 }
 
-SC_container GetFromAst(Node* root) {
-    
+void Node::Substitute() {}
+
+void LambdaNode::Substitute() {
+    body = SC::Substitution(shared_from_this());
+}
+
+void RebuildAst(std::shared_ptr<Node> vertex, bool prog=true, std::string name="PROG") {
+    SC_container res;
+    auto children = vertex->GetChildren();
+    for (auto i : children) RebuildAst(i, false);
+    vertex->Substitute();
+    if (prog) {
+        auto ptr = std::make_shared<SuperCombinator>(vertex, name);
+        all_functions.push_back(ptr);
+    }
 }
