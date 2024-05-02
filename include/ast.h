@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <iostream>
 #include <vector>
 #include <string>
 #include <variant>
@@ -54,6 +53,9 @@ class Position {
     virtual std::shared_ptr<Node> GetBody() { return nullptr; }
 
     virtual void SetFreeVar() {}
+
+    virtual void SetBounded() {}
+
 
     const std::string& GetName() const { throw; }
 
@@ -163,6 +165,7 @@ class LambdaNode : public VarNode {
 
     std::vector<std::shared_ptr<Node>> GetChildren() override;
 
+    void SetBounded() override;
 
     void Substitute() override;
 
@@ -183,11 +186,11 @@ class AppNode : public Node {
   public:
     AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg);
 
-    std::shared_ptr<const Node> GetFunc() const { return func; }
-    std::shared_ptr<Node> GetFunc() { return func; }
+    std::shared_ptr<const Node> GetFunc() const override { return func; }
+    std::shared_ptr<Node> GetFunc() override { return func; }
 
-    std::shared_ptr<const Node> GetArg() const { return arg; }
-    std::shared_ptr<Node> GetArg() { return arg; }
+    std::shared_ptr<const Node> GetArg() const override { return arg; }
+    std::shared_ptr<Node> GetArg() override { return arg; }
 
     std::vector<std::shared_ptr<Node>> GetChildren() override;
 };

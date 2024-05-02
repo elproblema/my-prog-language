@@ -1,6 +1,5 @@
 #include <SC.h>
 #include <ast.h>
-#include <iostream>
 #include <algorithm>
 #include <cassert>
 

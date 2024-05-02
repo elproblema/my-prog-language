@@ -1,6 +1,6 @@
+#include "ast.h"
 #include <gtest/gtest.h>
-#include <sstream>
-#include <iostream>
+
 #include <parser.hpp>
 #include <scanner.hpp>
 #include "help.h"
@@ -9,7 +9,7 @@
 
 //######################### TESTS ############################
 
-/*TEST_F(ast, error) {
+TEST_F(ast, error) {
     make_sample("@@");
     ASSERT_EQ(yyparse(root), 1);
 }
@@ -39,7 +39,7 @@ TEST_F(ast, constant_int) {
             &ConstNode::GetLL, 5,
             &ConstNode::GetDepth, 0,
             [](const ConstNode& v) {
-                v.GetFreeVar().size() == 0;
+                ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
@@ -56,7 +56,7 @@ TEST_F(ast, constant_float) {
             &ConstNode::GetLD, .6,
             &ConstNode::GetDepth, 0,
             [](const ConstNode& v) {
-                v.GetFreeVar().size() == 0;
+                ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
@@ -73,7 +73,7 @@ TEST_F(ast, constant_char) {
             &ConstNode::GetChar, '\\',
             &ConstNode::GetDepth, 0,
             [](const ConstNode& v) {
-                v.GetFreeVar().size() == 0;
+                ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
@@ -89,38 +89,38 @@ TEST_F(ast, free_var_check) {
         new Wrap(
             &AppNode::GetDepth, 2,
             [](const AppNode& v) {
-                v.GetFreeVar().size() == 3;
+                ASSERT_EQ(v.GetFreeVar().size(), 3);
             }
         )
     };
     format = "@0(@(V)(V))(V)";
     real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
-}*/
-
-template<typename T>
-struct X {
-    X() = delete;
-};
+}
 
 TEST_F(ast, plus) {
-    X<Wrap<AddNode>>();
+    make_sample("+");
+    ASSERT_EQ(yyparse(root), 0);
     types = {
         new Wrap<AddNode>()
     };
-}
-/*
-TEST_F(ast, identity) {
-    make_sample("@x.x");
-    std::string real_tree = "#(V)";
-    size_t start = 0;
-    ASSERT_EQ(yyparse(root), 0);
-    std::shared_ptr<Tree> real_root = std::make_shared<Tree>(real_tree, start);
+    format = "*0";
+    real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
-    ASSERT_EQ(root->GetDepth(), 1);
-    ASSERT_EQ(root->GetFreeVar().size(), 0);
 }
 
+TEST_F(ast, identity) {
+    make_sample("@x.x");
+    ASSERT_EQ(yyparse(root), 0);
+    types = {
+        new Wrap<LambdaNode>(),
+        new Wrap<VarNode>()
+    };
+    format = "#0(V1)";
+    real_root = std::make_shared<Tree>(format, start, types);
+    real_root->check(real_root, root);
+}
+/*
 TEST_F(ast, x_plus_y) {
     make_sample("+ x y");
     std::string real_tree = "@(@(*)(V))(V)";

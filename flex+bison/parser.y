@@ -71,6 +71,7 @@ NON_APP_EXPR:
 | LAMBDA VAR '.' EXPR 
 {
   $$ = std::make_shared<LambdaNode>(std::move(dynamic_cast<VarNode&>(*$2)), $4);
+  $$->SetBounded();
   $$->SetLoc($1);
 }
 | '(' EXPR ')' 

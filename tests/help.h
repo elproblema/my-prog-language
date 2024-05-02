@@ -1,11 +1,11 @@
 #pragma once
 
 #include <gtest/gtest.h>
+
 #include <cassert>
 #include <map>
 #include <functional>
-#include <iostream>
-#include <sstream>
+
 #include <parser.hpp>
 #include <scanner.hpp>
 #include <ast.h>
@@ -16,7 +16,14 @@
 struct Tree;
 extern int yy_flex_debug;
 
-std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func;
+std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func; //NOLINT
+
+struct Base {
+    using Type = Node;
+    virtual void check(const Node&) = 0;
+
+    virtual ~Base() {}
+};
 
 // ####################### METAPROGRAMMING ##########################
 
@@ -38,8 +45,16 @@ struct member_pointer_value<Value Class::*>
     typedef Value type;
 };
 
-template<class T>
-struct function_traits : function_traits<decltype(&T::operator())> {
+template<typename T>
+concept LambdaLike = requires {
+    &T::operator();
+};
+
+template<typename T>
+struct function_traits {};
+
+template<LambdaLike T>
+struct function_traits<T> : function_traits<decltype(&T::operator())> {
 };
 
 template<class R, class... Args>
@@ -70,11 +85,6 @@ template<class T, class R, class... Args>
 struct function_traits<R (T::*)(Args...) const> {
     using result_type = R;
     using argument_types = std::tuple<Args...>;
-};
-
-struct Base {
-    using Type = Node;
-    virtual void check(const Node&) = 0;
 };
 
 template<typename T>
@@ -120,7 +130,6 @@ struct Wrap<PtrToMemberType, Value, Tail...> : public Base {
 
 template<Derived<Node> Class>
 struct Wrap<Class> : public Base {
-
     Wrap() {}
 
     void check(const Type& obj_) {
@@ -146,6 +155,7 @@ struct Wrap<Func, Tail...> : public Base {
 
 template<>
 struct Wrap<> : public Base {
+    using V = bool;
     Wrap() {}
 
     void check(const Type& obj_) {}
@@ -153,10 +163,6 @@ struct Wrap<> : public Base {
 
 
 Wrap() -> Wrap<>;
-
-template<
-Derived<Node> T>
-Wrap() -> Wrap<T>;
 
 template<
 MemberPointer T, 
@@ -218,15 +224,14 @@ struct Tree {
     }
 };
 
-
-void make_sample(const char* s) {
+void make_sample(const char* s) { //NOLINT
     FILE* f = fopen("input", "w");
     fprintf(f, "%s", s);
     fclose(f);
     freopen("input", "r", stdin);
 }
 
-void set_map() {
+void set_map() { //NOLINT
     char_map_func = {
         {'@', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
             ASSERT_EQ(vertex->children.size(), 2); 
@@ -270,6 +275,6 @@ void set_map() {
     };
 }
 
-void unset_map() {
+void unset_map() { //NOLINT
     char_map_func = {};
 }

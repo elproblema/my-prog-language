@@ -1,8 +1,9 @@
 #include <ast.h>
 #include <algorithm>
 #include <ranges>
-#include <iostream>
+
 #include <iterator>
+#include <functional>
 
 namespace rv = std::ranges::views;
 
@@ -17,7 +18,6 @@ LambdaNode::LambdaNode(VarNode&& var, std::shared_ptr<Node> body): VarNode(std::
         return var.lock()->GetName() != name; 
     };
     for (auto var : body->GetFreeVar() | rv::filter(bound)) {
-        var.lock()->head = weak_from_this();
         bonded.push_back(var);
     }
     auto to_copy = body->GetFreeVar() | rv::filter(unbound);
@@ -42,6 +42,11 @@ void VarNode::SetFreeVar() {
     free_var = {weak_from_this()};
 }
 
+void LambdaNode::SetBounded() {
+    for (auto var : bonded) {
+        var.lock()->head = weak_from_this();
+    }
+}
 
 std::vector<std::shared_ptr<Node>> Node::GetChildren() {
     return {};
