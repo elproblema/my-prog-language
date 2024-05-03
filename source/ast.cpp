@@ -48,10 +48,6 @@ void LambdaNode::SetBounded() {
     }
 }
 
-std::vector<std::shared_ptr<Node>> Node::GetChildren() {
-    return {};
-} 
-
 std::vector<std::shared_ptr<Node>> LambdaNode::GetChildren() {
     return {body};
 }

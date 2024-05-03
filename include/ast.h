@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception>
 #include <memory>
 #include <vector>
 #include <string>
@@ -41,16 +42,18 @@ class Position {
 
     // Virtual functions
 
-    virtual std::vector<std::shared_ptr<Node>> GetChildren();
+    virtual std::vector<std::shared_ptr<Node>> GetChildren() { throw std::exception(); };
 
-    virtual std::shared_ptr<const Node> GetFunc() const { return nullptr; }
-    virtual std::shared_ptr<Node> GetFunc() { return nullptr; }
+    virtual const std::vector<std::weak_ptr<VarNode>>& GetBonded() const { throw std::exception(); };
 
-    virtual std::shared_ptr<const Node> GetArg() const { return nullptr; }
-    virtual std::shared_ptr<Node> GetArg() { return nullptr; }
+    virtual std::shared_ptr<const Node> GetFunc() const { throw std::exception(); };
+    virtual std::shared_ptr<Node> GetFunc() { throw std::exception(); };
 
-    virtual std::shared_ptr<const Node> GetBody() const { return nullptr; }
-    virtual std::shared_ptr<Node> GetBody() { return nullptr; }
+    virtual std::shared_ptr<const Node> GetArg() const { throw std::exception(); };
+    virtual std::shared_ptr<Node> GetArg() { throw std::exception(); };
+
+    virtual std::shared_ptr<const Node> GetBody() const { throw std::exception(); };
+    virtual std::shared_ptr<Node> GetBody() { throw std::exception(); };
 
     virtual void SetFreeVar() {}
 
@@ -161,6 +164,8 @@ class LambdaNode : public VarNode {
 
     std::shared_ptr<const Node> GetBody() const override { return body; }
     std::shared_ptr<Node> GetBody() override { return body; }
+
+    const std::vector<std::weak_ptr<VarNode>>& GetBonded() const override { return bonded; }
 
 
     std::vector<std::shared_ptr<Node>> GetChildren() override;
