@@ -37,12 +37,14 @@ include_directories(${GTEST_INCLUDE_DIR})
 ################################
 
 add_library(test_helper tests/help.h tests/fixtures.h tests/help.cpp)
+add_library(printer include/visitor.h tests/printer.cpp)
 add_executable(tests tests/ast_test.cpp tests/SC_test.cpp)
 
 target_link_libraries(tests GTest::gtest_main)
 target_link_libraries(tests grammar)
 target_link_libraries(tests ast)
 target_link_libraries(tests test_helper)
+target_link_libraries(tests printer)
 
 include(GoogleTest)
 gtest_discover_tests(tests)

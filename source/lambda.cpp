@@ -1,5 +1,6 @@
 #include <ast.h>
 #include <SC.h>
+#include <cassert>
 
 #define SC SuperCombinator
 // Only lambda overloads
@@ -51,8 +52,14 @@ LambdaNode::GetSomeVars() const {
 
 const std::string& LambdaNode::GetName() const { 
     if (ind_tag) return body->GetName();
-    throw WAE("GetName"); 
+    throw WAE("Lambda GetName"); 
 }
+
+std::string LambdaNode::SafeGetName() const {
+    if (ind_tag) return body->SafeGetName();
+    return "";
+}
+
 
 const std::string& LambdaNode::GetFuncName() const { 
     if (ind_tag) return body->GetFuncName();
@@ -74,6 +81,9 @@ void LambdaNode::SetBounded() {
 void LambdaNode::Substitute() {
     if (ind_tag) body->Substitute();
     body = SC::Substitution(shared_from_this());
+    if (body == nullptr) {
+        assert(false);
+    }
     SetIndirected();
 }
 

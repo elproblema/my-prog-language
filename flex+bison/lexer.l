@@ -10,7 +10,7 @@
     #include <cstdlib>
     #include <memory>
 
-    static int yy_next_column = 1;
+    int yy_next_column = 1;
     int yycolumn = 1;
 
     #define HANDLE_COLUMN yycolumn = yy_next_column; yy_next_column += strlen(yytext)

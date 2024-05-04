@@ -29,8 +29,12 @@ struct ast : public testing::Test {
         set_map();
         yydebug = 1;
         yy_flex_debug = 1;
-        yycolumn = 0;
+        extern int yycolumn; 
+        extern int yylineno; 
+        extern int yy_next_column;
+        yycolumn = 1;
         yylineno = 1;
+        yy_next_column = 1;
     }
 
     void TearDown() {
@@ -53,5 +57,7 @@ struct rebuild : ast {
         ast::SetUp();
         extern SC_container all_functions;
         all_functions.clear();
+        yy_flex_debug = 0;
+        yydebug = 0;
     }
 };

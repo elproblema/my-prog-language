@@ -66,7 +66,7 @@ std::shared_ptr<Node> SC::EtaConversion()  {
     {
         auto var = begin->GetArg();
         if (var == nullptr) goto ret; // :)
-        if (var->GetName() != some_vars[i].lock()->GetName()) goto ret; // :)
+        if (var->SafeGetName() != some_vars[i].lock()->GetName()) goto ret; // :)
         begin = begin->GetFunc();
         --i;
     }
@@ -92,6 +92,7 @@ std::shared_ptr<Node> SC::Substitution(std::shared_ptr<LambdaNode> abs) {
         res = std::make_shared<AppNode>(res, comb->GetSomeVars()[i].lock());
     }
     ind_node->body = comb->EtaConversion();
+    
     return res;
 }
 

@@ -25,7 +25,9 @@ struct Base {
     const Type* skip_ind_nodes(const Type& obj) {
         const auto* ptr = &obj;
         while (auto ptr_ = dynamic_cast<const LambdaNode*>(ptr)) {
-            if (!ptr_->ind_tag) break;
+            if (!ptr_->ind_tag) {
+                break;
+            }
             ptr = ptr_->body.get();
         }
         return ptr;
@@ -162,6 +164,7 @@ struct Wrap<Func, Tail...> : public Base {
         ASSERT_NO_THROW(dynamic_cast<const class_t&>(*obj_));
         const class_t& obj = dynamic_cast<const class_t&>(*obj_);
         f(obj);
+        other.check(obj);
     }
 };
 

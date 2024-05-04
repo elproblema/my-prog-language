@@ -6,6 +6,7 @@
 #include <variant>
 
 #include <exceptions.h>
+#include <visitor.h>
 
 // from flex
 extern int yycolumn; 
@@ -46,6 +47,7 @@ class Position {
 
 
     // Virtual functions
+    virtual void accept(Visitor& x) const { x.visit(*this); }
     virtual std::vector<std::shared_ptr<Node>> GetChildren() { return {}; };
 
     virtual const std::vector<std::shared_ptr<VarNode>>& GetBonded() const { throw WAE("GetBonded"); };
@@ -63,6 +65,8 @@ class Position {
     GetSomeVars() const { throw WAE("GetSomeVars"); }
 
     virtual const std::string& GetName() const { throw WAE("GetName"); }
+    virtual std::string SafeGetName() const { return ""; }
+
 
     virtual const std::string& GetFuncName() const { throw WAE("GetFuncName"); }
 
@@ -93,6 +97,9 @@ class ConstNode : public Node {
     const long double& GetLD() const { return std::get<long double>(value); }
     const char& GetChar() const { return std::get<char>(value); }
 
+    void accept(Visitor& x) const override { x.visit(*this); }
+
+
     ~ConstNode() = default;
 };
 
@@ -100,6 +107,7 @@ class ConstNode : public Node {
 class BIFNode : public Node {
   public:
     bool IsFunc() const override;
+    void accept(Visitor& x) const override { x.visit(*this); }
 };
 
 //Addition
@@ -151,11 +159,14 @@ class VarNode : public Node {
   public:
     VarNode(std::string name);
 
+    void accept(Visitor& x) const override { x.visit(*this); }
     void SetFreeVar() override;
     const std::string& GetName() const override { return name; }
+    std::string SafeGetName() const override { return name; }
     std::weak_ptr<LambdaNode> GetHead() override { return head; }
 
 friend class LambdaNode;
+friend class Visitor;
 };
 
 // Associated with lambda abstraction expression
@@ -177,10 +188,11 @@ class LambdaNode : public VarNode {
   public:
     LambdaNode(VarNode&& var, std::shared_ptr<Node> body);
 
+    void accept(Visitor& x) const override { x.visit(*this); }
     void SetIndirected() { ind_tag = true; }
+    bool GetIndTag() const { return ind_tag; }
 
     std::vector<std::shared_ptr<Node>> GetChildren() override;
-
     const std::vector<std::shared_ptr<VarNode>>& GetBonded() const override;
 
     std::shared_ptr<const Node> GetFunc() const override;
@@ -197,6 +209,8 @@ class LambdaNode : public VarNode {
 
     const std::string& GetName() const override;
 
+    std::string SafeGetName() const override;
+
     const std::string& GetFuncName() const override;
     
     void SetFreeVar() override;
@@ -211,6 +225,7 @@ class LambdaNode : public VarNode {
 friend class VarNode;
 friend class SuperCombinator;
 friend class Base;
+friend class Printer;
 };
 
 // Associated with application expression
@@ -224,6 +239,8 @@ class AppNode : public Node {
 
   public:
     AppNode(std::shared_ptr<Node> func, std::shared_ptr<Node> arg);
+
+    void accept(Visitor& x) const override { x.visit(*this); }
 
     std::shared_ptr<const Node> GetFunc() const override { return func; }
     std::shared_ptr<Node> GetFunc() override { return func; }

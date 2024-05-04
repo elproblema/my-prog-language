@@ -1,5 +1,6 @@
 #pragma once
 
+#include "visitor.h"
 #include <ast.h>
 #include <vector>
 // Super Combinator
@@ -22,13 +23,21 @@ class SuperCombinator : public Node {
     SuperCombinator(std::shared_ptr<Node> body, std::string func_name): 
     body(body), func_name(func_name) {}
 
-    std::shared_ptr<const Node> GetBody() const override { return body; }
+    void accept(Visitor& x) const override { x.visit(*this); }
+
+    std::shared_ptr<const Node> GetBody() const override { 
+        return body; 
+    }
+
+    std::shared_ptr<Node> GetBody() override { 
+        return body; 
+    }
 
     const std::vector<std::weak_ptr<VarNode>>& 
     GetSomeVars() const override;
 
     const std::string& GetFuncName() const override;
-
+    
     bool IsFunc() const override;
     std::shared_ptr<Node> EtaConversion() override;
 
