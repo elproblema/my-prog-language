@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22.1)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 20)
+SET(CMAKE_CXX_FLAGS "-Wno-unused-value")
+
 
 project(Compiler)
 
@@ -19,7 +21,7 @@ BISON_TARGET(parser flex+bison/parser.y "${CMAKE_BINARY_DIR}/parser.cpp" COMPILE
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
 
 add_library(grammar ${FLEX_scanner_OUTPUTS} ${BISON_parser_OUTPUTS})
-add_library(ast include/ast.h include/SC.h source/ast.cpp source/SC.cpp)
+add_library(ast include/ast.h include/SC.h source/ast.cpp source/SC.cpp source/lambda.cpp)
 
 
 ################################
@@ -34,11 +36,13 @@ include_directories(${GTEST_INCLUDE_DIR})
 # Unit Tests
 ################################
 
-add_compile_definitions(fsanitize=addres fconcepts O0)
-add_executable(tests tests/ast.cpp tests/fixtures.h tests/help.h)
+add_library(test_helper tests/help.h tests/fixtures.h tests/help.cpp)
+add_executable(tests tests/ast_test.cpp tests/SC_test.cpp)
+
 target_link_libraries(tests GTest::gtest_main)
 target_link_libraries(tests grammar)
 target_link_libraries(tests ast)
+target_link_libraries(tests test_helper)
 
 include(GoogleTest)
 gtest_discover_tests(tests)

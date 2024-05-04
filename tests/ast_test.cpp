@@ -1,10 +1,14 @@
-#include "ast.h"
-#include <functional>
 #include <gtest/gtest.h>
 
+#include <ast.h>
+#include <SC.h>
+
+#include <functional>
 #include <memory>
+
 #include <parser.hpp>
 #include <scanner.hpp>
+
 #include "help.h"
 #include "fixtures.h"
 
@@ -25,10 +29,10 @@ TEST_F(ast, variable) {
                 ASSERT_EQ(v.GetFreeVar().size(), 1);
             },
             &VarNode::GetName, "x",
-            &VarNode::GetDepth, 0
+            &VarNode::GetHeight, 0
         )
     };
-    format = "V0";
+    format = "C0";
     real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
 }
@@ -39,13 +43,13 @@ TEST_F(ast, constant_int) {
     types = {
         new Wrap(
             &ConstNode::GetLL, 5,
-            &ConstNode::GetDepth, 0,
+            &ConstNode::GetHeight, 0,
             [](const ConstNode& v) {
                 ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
-    format = "V0";
+    format = "C0";
     real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
 }
@@ -56,13 +60,13 @@ TEST_F(ast, constant_float) {
     types = {
         new Wrap(
             &ConstNode::GetLD, .6,
-            &ConstNode::GetDepth, 0,
+            &ConstNode::GetHeight, 0,
             [](const ConstNode& v) {
                 ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
-    format = "V0";
+    format = "C0";
     real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
 }
@@ -73,13 +77,13 @@ TEST_F(ast, constant_char) {
     types = {
         new Wrap(
             &ConstNode::GetChar, '\\',
-            &ConstNode::GetDepth, 0,
+            &ConstNode::GetHeight, 0,
             [](const ConstNode& v) {
                 ASSERT_EQ(v.GetFreeVar().size(), 0);
             }
         )
     };
-    format = "V0";
+    format = "C0";
     real_root = std::make_shared<Tree>(format, start, types);
     real_root->check(real_root, root);
 }
@@ -89,7 +93,7 @@ TEST_F(ast, free_var_check) {
     ASSERT_EQ(yyparse(root), 0);
     types = {
         new Wrap(
-            &AppNode::GetDepth, 2,
+            &AppNode::GetHeight, 2,
             [](const AppNode& v) {
                 ASSERT_EQ(v.GetFreeVar().size(), 3);
             }
@@ -118,7 +122,7 @@ TEST_F(ast, identity) {
         new Wrap(
             [](const LambdaNode& v) {
                 ASSERT_EQ(v.GetBonded().size(), 1);
-                ASSERT_EQ(v.GetBonded()[0].lock()->GetName(), "x");
+                ASSERT_EQ(v.GetBonded()[0]->GetName(), "x");
             }
         ),
         new Wrap(&VarNode::GetName, "x")
@@ -162,7 +166,7 @@ TEST_F(ast, plus_func) {
             [](const LambdaNode& v) {
                 auto vec = v.GetBonded();
                 ASSERT_EQ(vec.size(), 1);
-                ASSERT_EQ(vec[0].lock()->GetName(), "x");
+                ASSERT_EQ(vec[0]->GetName(), "x");
             }
         ),
         new Wrap(
@@ -172,7 +176,7 @@ TEST_F(ast, plus_func) {
                 ASSERT_EQ(free.size(), 1);
                 ASSERT_EQ(bonded.size(), 1);
                 ASSERT_EQ(free[0].lock()->GetName(), "x");
-                ASSERT_EQ(bonded[0].lock()->GetName(), "y");
+                ASSERT_EQ(bonded[0]->GetName(), "y");
             }
         ),
         new Wrap<RemNode>()
@@ -197,9 +201,8 @@ TEST_F(ast, double_combinator) {
                 auto vec = v.GetBonded();
                 ASSERT_EQ(vec.size(), 2);
             }
-        )  ,
-        new Wrap
-        (&AppNode::GetDepth, 3)
+        ),
+        new Wrap(&AppNode::GetHeight, 3)
     };
     format = "@2(#0(@(V)(V)))(#1(@(V)(V)))";
     real_root = std::make_shared<Tree>(format, start, types);
@@ -215,7 +218,7 @@ TEST_F(ast, double_combinator_if_no_parenthesis) {
         ([](const LambdaNode& v) {
             ASSERT_EQ(v.GetFreeVar().size(), 0);
         },
-        &AppNode::GetDepth, 4)
+        &AppNode::GetHeight, 4)
     };
     format = "#0(@(@(V)(V))(#(@(V)(V))))";
     real_root = std::make_shared<Tree>(format, start, types);

@@ -16,11 +16,20 @@
 struct Tree;
 extern int yy_flex_debug;
 
-std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func; //NOLINT
+extern std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func; //NOLINT
 
 struct Base {
     using Type = Node;
     virtual void check(const Node&) = 0;
+
+    const Type* skip_ind_nodes(const Type& obj) {
+        const auto* ptr = &obj;
+        while (auto ptr_ = dynamic_cast<const LambdaNode*>(ptr)) {
+            if (!ptr_->ind_tag) break;
+            ptr = ptr_->body.get();
+        }
+        return ptr;
+    }
 
     virtual ~Base() {}
 };
@@ -115,9 +124,10 @@ struct Wrap<PtrToMemberType, Value, Tail...> : public Base {
 
     Wrap(PtrToMemberType ptr, Value x, Tail... args): ptr(ptr), value(x), other(args...) {}
 
-    void check(const Type& obj_) {
-        ASSERT_NO_THROW(dynamic_cast<const class_t&>(obj_));
-        const class_t& obj = dynamic_cast<const class_t&>(obj_);
+    void check(const Type& obj__) {
+        const Type* obj_ = skip_ind_nodes(obj__);
+        ASSERT_NO_THROW(dynamic_cast<const class_t&>(*obj_));
+        const class_t& obj = dynamic_cast<const class_t&>(*obj_);
         if constexpr (std::is_member_function_pointer<PtrToMemberType>::value) {
             ASSERT_EQ(value, (obj.*ptr)());
         } else {
@@ -132,8 +142,9 @@ template<Derived<Node> Class>
 struct Wrap<Class> : public Base {
     Wrap() {}
 
-    void check(const Type& obj_) {
-        ASSERT_NO_THROW(dynamic_cast<const Class&>(obj_));
+    void check(const Type& obj__) {
+        const Type* obj_ = skip_ind_nodes(obj__);
+        ASSERT_NO_THROW(dynamic_cast<const Class&>(*obj_));
     }
 };
 
@@ -146,9 +157,10 @@ struct Wrap<Func, Tail...> : public Base {
 
     Wrap(Func f, Tail... args): f(f), other(args...) {}
 
-    void check(const Type& obj_) {
-        ASSERT_NO_THROW(dynamic_cast<const class_t&>(obj_));
-        const class_t& obj = dynamic_cast<const class_t&>(obj_);
+    void check(const Type& obj__) {
+        const Type* obj_ = skip_ind_nodes(obj__);
+        ASSERT_NO_THROW(dynamic_cast<const class_t&>(*obj_));
+        const class_t& obj = dynamic_cast<const class_t&>(*obj_);
         f(obj);
     }
 };
@@ -199,7 +211,7 @@ struct Tree {
         size_t n = format.size();
         assert(n > start);
         char c = format[start];
-        assert(c == '@' || c == 'V' || c == '*' || c == 'C' || c == '#');
+        assert(c == '@' || c == 'V' || c == '*' || c == 'C' || c == '#' || c == 'S');
 
         check = char_map_func[c];
 
@@ -224,57 +236,8 @@ struct Tree {
     }
 };
 
-void make_sample(const char* s) { //NOLINT
-    FILE* f = fopen("input", "w");
-    fprintf(f, "%s", s);
-    fclose(f);
-    freopen("input", "r", stdin);
-}
+void make_sample(const char* s);
 
-void set_map() { //NOLINT
-    char_map_func = {
-        {'@', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 2); 
-            vertex->template_->check(*opp_vertex);
-            auto func = vertex->children[0];
-            auto arg = vertex->children[1];
-            auto func_opp = opp_vertex->GetFunc();
-            auto arg_opp = opp_vertex->GetArg();
-            func->check(func, func_opp); 
-            arg->check(arg, arg_opp);
-        }},
-        {'V', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 0); 
-            vertex->template_->check(*opp_vertex);
+void set_map();
 
-        }},
-        {'*', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 0); 
-            vertex->template_->check(*opp_vertex);
-
-        }},
-        {'C', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 0); 
-            vertex->template_->check(*opp_vertex);
-
-        }},
-        {'#', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 1); 
-            vertex->template_->check(*opp_vertex);
-            auto body = vertex->children[0];
-            auto body_opp = opp_vertex->GetBody();
-            body->check(body, body_opp);
-        }},
-        {'S', [](std::shared_ptr<Tree> vertex, std::shared_ptr<const Node> opp_vertex) -> void { 
-            ASSERT_EQ(vertex->children.size(), 1); 
-            vertex->template_->check(*opp_vertex);
-            auto body = vertex->children[0];
-            auto body_opp = opp_vertex->GetBody();
-            body->check(body, body_opp);
-        }}
-    };
-}
-
-void unset_map() { //NOLINT
-    char_map_func = {};
-}
+void unset_map();
