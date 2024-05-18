@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include <ast.h>
-#include <SC.h>
+#include <ast/ast.h>
+#include <ast/SC.h>
 
 #include <functional>
 #include <memory>

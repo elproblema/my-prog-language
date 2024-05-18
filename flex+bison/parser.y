@@ -1,6 +1,6 @@
 %{
   #include <iostream>
-  #include <ast.h>
+  #include <ast/ast.h>
 
   void yyerror(std::shared_ptr<Node>, char const *);
   int yylex(void);  
@@ -8,7 +8,7 @@
 
 %code requires {
   #include <iostream>
-  #include <ast.h>
+  #include <ast/ast.h>
   void yyerror(char const *);
   int yylex(void);
 }

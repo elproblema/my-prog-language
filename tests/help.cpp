@@ -6,8 +6,8 @@
 
 #include <parser.hpp>
 #include <scanner.hpp>
-#include <ast.h>
-#include <SC.h>
+#include <ast/ast.h>
+#include <ast/SC.h>
 #include "help.h"
 
 std::map<char, std::function<void(std::shared_ptr<Tree>, std::shared_ptr<const Node>)>> char_map_func; //NOLINT

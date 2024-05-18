@@ -8,8 +8,8 @@
 
 #include <parser.hpp>
 #include <scanner.hpp>
-#include <ast.h>
-#include <SC.h>
+#include <ast/ast.h>
+#include <ast/SC.h>
 
 // ###################### HELPING STRUCTURES #########################
 

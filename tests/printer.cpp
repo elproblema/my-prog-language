@@ -1,6 +1,6 @@
 #include <visitor.h>
-#include <ast.h>
-#include <SC.h>
+#include <ast/ast.h>
+#include <ast/SC.h>
 #include <iostream>
 
 struct Printer : public Visitor {

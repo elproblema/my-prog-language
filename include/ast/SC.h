@@ -1,7 +1,7 @@
 #pragma once
 
-#include "visitor.h"
-#include <ast.h>
+#include <visitor.h>
+#include <ast/ast.h>
 #include <vector>
 // Super Combinator
 

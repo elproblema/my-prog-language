@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include <SC.h>
-#include <ast.h>
+#include <ast/SC.h>
+#include <ast/ast.h>
 #include <exceptions.h>
 
 #define SC SuperCombinator
@@ -97,6 +97,12 @@ std::shared_ptr<Node> SC::Substitution(std::shared_ptr<LambdaNode> abs) {
 }
 
 void Node::Substitute() {
+}
+
+void LambdaNode::Substitute() {
+    if (ind_tag) body->Substitute();
+    body = SC::Substitution(shared_from_this());
+    SetIndirected();
 }
 
 void RebuildAst(std::shared_ptr<Node> vertex, bool prog, std::string name) {

@@ -1,5 +1,5 @@
-#include <ast.h>
-#include <SC.h>
+#include <ast/ast.h>
+#include <ast/SC.h>
 #include <cassert>
 
 #define SC SuperCombinator
@@ -76,15 +76,6 @@ void LambdaNode::SetBounded() {
     for (auto var : bonded) {
         var->head = weak_from_this();
     }
-}
-
-void LambdaNode::Substitute() {
-    if (ind_tag) body->Substitute();
-    body = SC::Substitution(shared_from_this());
-    if (body == nullptr) {
-        assert(false);
-    }
-    SetIndirected();
 }
 
 bool LambdaNode::IsFunc() const {

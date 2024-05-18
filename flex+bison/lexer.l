@@ -3,7 +3,7 @@
 %option yylineno
 
 %{
-    #include <ast.h>
+    #include <ast/ast.h>
     #include <parser.hpp>   
     #include <iostream>
     #include <cstring>

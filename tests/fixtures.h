@@ -7,7 +7,7 @@
 #include <parser.hpp>
 #include <scanner.hpp>
 #include "help.h"
-#include "SC.h"
+#include <ast/SC.h>
 
 // ####################### FIXTURES ##########################
 
