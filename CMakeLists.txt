@@ -3,16 +3,21 @@ cmake_minimum_required(VERSION 3.22)
 find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
 find_package(LLVM REQUIRED CONFIG)
-llvm_map_components_to_libnames(LLVM_LIBS core x86asmparser x86codegen)
+
+llvm_map_components_to_libnames(LLVM_LIBS core codegen)
+include_directories(${LLVM_INCLUDE_DIRS})
+
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_C_COMPILER clang)
 
 set(cov_flags "-g -fprofile-arcs -ftest-coverage")
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "-stdlib=libc++ -Wno-unused-value ${LLVM_DEFINITIONS}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld -stdlib=libc++ -lc++abi")
+set(CMAKE_CXX_FLAGS "-Wno-unused-value ${LLVM_DEFINITIONS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 set(CMAKE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1) #for clang language server
 ################################
 # GTest installation
 ################################
@@ -32,7 +37,6 @@ add_subdirectory(${googletest_SOURCE_DIR})
 ################################
 
 project(Compiler)
-
 
 include_directories(${CMAKE_BINARY_DIR})
 include_directories("${CMAKE_SOURCE_DIR}/include")

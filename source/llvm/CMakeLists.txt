@@ -1,0 +1,1 @@
+add_library(LL g-adapter.cpp)
