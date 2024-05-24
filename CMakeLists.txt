@@ -49,6 +49,3 @@ add_library(grammar ${FLEX_scanner_OUTPUTS} ${BISON_parser_OUTPUTS})
 
 add_subdirectory(source)
 add_subdirectory(tests)
-target_link_libraries(tests ast)
-target_link_libraries(tests gtest_main)
-target_link_libraries(tests gtest)

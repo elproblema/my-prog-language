@@ -1,1 +1,1 @@
-add_library(LL g-adapter.cpp)
+add_library(translator g-adapter.cpp g-commands.cpp llvm-shortcuts.cpp)

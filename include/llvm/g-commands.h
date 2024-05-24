@@ -1,31 +1,59 @@
 #pragma once
 #include "g-adapter.h"
-#include <cstddef>
 
 namespace GCode {
 
-struct instruction {
-    virtual void adapt(GMachineState::context c) = 0;
-};
-
-struct PopInstruction : instruction {
+struct Pop {
     size_t cnt;
 
-    void adapt(GMachineState::context c); 
+    void adapt(GMachineState::context* c); 
 };
 
-struct PushInstruction : instruction {
-    // zero-indexed
-    size_t pos;
+struct Push {
+    size_t n;
 
-    void adapt(GMachineState::context c);
+    void adapt(GMachineState::context* c);
 };
 
 template<typename T>
 struct PushValue {
     T value;
 
-    void adapt(GMachineState::context c);
+    void adapt(GMachineState::context* c);
+};
+
+struct PushFunc {
+    FuncSubstitution* f;
+
+    void adapt(GMachineState::context* c);
+};
+
+struct Update {
+    size_t n;
+
+    void adapt(GMachineState::context* c);
+};
+
+struct Slide {
+    size_t n;
+
+    void adapt(GMachineState::context* c);
+};
+
+struct Unwind {
+    void adapt(GMachineState* st);
+};
+
+struct Eval {
+    void adapt(GMachineState* st);
+};
+
+struct Add {
+    void adapt(GMachineState::context* c);
+};
+
+struct MKAP {
+    void adapt(GMachineState::context* c);
 };
 
 }
