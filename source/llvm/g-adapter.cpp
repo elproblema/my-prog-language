@@ -1,3 +1,4 @@
+#include "ast/SC.h"
 #include <llvm-18/llvm/IR/BasicBlock.h>
 #include <llvm-18/llvm/IR/Function.h>
 #include <llvm/IR/Constant.h>
@@ -12,15 +13,27 @@
 #include <llvm/g-adapter.h>
 #include <llvm/g-commands.h>
 #include <llvm/llvm-shortcuts.h>
+#include <llvm/g-sub.h>
 
+#include <iostream>
+
+extern SC_container all_functions;
 
 GMachineState::GMachineState(): 
 builder(ctx), module("main", ctx)
 {
+    std::cout << "#1\n";
     DefineTypes();
-    DefineFunctions();
+    std::cout << "#2\n";
+    for (auto f : all_functions) std::cout << f->GetFuncName() << "\n";
+    for (auto f : all_functions) {
+        sub_funcs[f->GetFuncName()] = new FuncSubstitution(this, f);
+    }
+    std::cout << "#3\n";
     InitGlobal();
-    PrepareToExecute();
+    std::cout << "#4\n";
+    DefineFunctions();
+    std::cout << "#5\n";
 }
 
 void GMachineState::DefineTypes() {
@@ -28,6 +41,7 @@ void GMachineState::DefineTypes() {
     DoubleTy = llvm::Type::getDoubleTy(ctx);
     CharTy = llvm::Type::getInt8Ty(ctx);
     IntTy = llvm::Type::getInt64Ty(ctx);
+    SubFuncTy = llvm::FunctionType::get(VoidTy, false);
 
     NodePtrTy = llvm::PointerType::getUnqual(IntTy);
     StackNodeTy = llvm::StructType::create(NodePtrTy);
@@ -53,7 +67,7 @@ void GMachineState::DefineTypes() {
         {
         TagTy, 
         IntTy,
-        llvm::PointerType::getUnqual(IntTy)
+        llvm::PointerType::getUnqual(SubFuncTy)
         }, "func_node"
     );
     IndNodeTy = llvm::StructType::create({TagTy, NodePtrTy});
@@ -65,67 +79,55 @@ void GMachineState::InitGlobal() {
         StackPtrTy,             
         false,                 
         llvm::GlobalValue::ExternalLinkage, 
-        llvm::ConstantPointerNull::get(StackPtrTy),            
+        nullptr,            
         "stack_top"        
     );
 }
 
 void GMachineState::DefineFunctions() {
-    // UNWIND START
+    std::cout << "#1.1\n";
     {
-        auto FuncTy = llvm::FunctionType::get(VoidTy, false);
-        UnwindFunc = llvm::Function::Create(FuncTy, llvm::Function::ExternalLinkage, "unwind", module);
-        auto entry = llvm::BasicBlock::Create(ctx, "entry", UnwindFunc);
-
-        builder.SetInsertPoint(entry);
-        auto AppBB = llvm::BasicBlock::Create(ctx, "app_node");
-        auto FuncBB = llvm::BasicBlock::Create(ctx, "func_node");
-        auto MergeBB = llvm::BasicBlock::Create(ctx, "merge");
-
-        auto SwitchValue = LoadTag(this, stack_top);
-        auto Switch = builder.CreateSwitch(SwitchValue, MergeBB, 2);
-        Switch->addCase(ConstantChar(this, APP), AppBB);
-        Switch->addCase(ConstantChar(this, FUNC), FuncBB);
-
-        builder.SetInsertPoint(AppBB);
-        auto lhs = LoadFromAppNode(this, LoadStackNode(this, stack_top), 0);
-        builder.CreateStore(PointerAdd(this, stack_top, 1), stack_top);
-        builder.CreateStore(lhs, LoadStackNode(this, stack_top));
-        builder.CreateBr(MergeBB);
-
-        builder.SetInsertPoint(FuncBB);
-        auto val = builder.CreateStructGEP(FuncNodeTy, LoadStackNode(this, stack_top), 1);
-        builder.CreateCall(UnpackFunc, val);
-        builder.CreateBr(MergeBB);
-
-        builder.SetInsertPoint(MergeBB);
-        builder.CreateRetVoid();
+        llvm::FunctionType* mainFunctionType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+        Main = llvm::Function::Create(mainFunctionType, llvm::Function::ExternalLinkage, "main", module);
     }
-
-    //UNWIND END
-    //UNPACK START
+    
+    std::cout << "#1.3\n";
+    //MAIN START
     {
-        auto FuncTy = llvm::FunctionType::get(VoidTy, IntTy, false);
-        UnpackFunc = llvm::Function::Create(FuncTy, llvm::Function::ExternalLinkage, "unpack", module);
-        auto entry = llvm::BasicBlock::Create(ctx, "entry", UnpackFunc);
-        auto ret_block = llvm::BasicBlock::Create(ctx, "ret_label");
-        auto loop_block = llvm::BasicBlock::Create(ctx, "loop_label");
-
+        llvm::BasicBlock* entry = llvm::BasicBlock::Create(ctx, "entry", Main);
         builder.SetInsertPoint(entry);
-        auto ptr_to_ind = builder.CreateAlloca(IntTy, nullptr, "ind");
-        builder.CreateStore(ConstantInt(this, 0), ptr_to_ind);
-        builder.CreateBr(loop_block);
+        std::cout << "#1\n";
+        builder.CreateLoad(StackNodeTy, builder.CreateAlloca(StackNodeTy, 1000000), "init_stack");
+        std::cout << "#2\n";
+        GMachineState::Context c(this, {}, 0);
+        std::cout << "#3\n";
+        GCode::PushGlobal("PROG").adapt(&c);
+        std::cout << "#4\n";
+        GCode::Eval().Call(this);
+        std::cout << "#5\n";
 
-        builder.SetInsertPoint(ret_block);
-        builder.CreateRetVoid();
-
-        builder.SetInsertPoint(loop_block);
-        auto ptr_to_node_on_ind = builder.CreatePtrAdd(stack_top, builder.CreateLoad(IntTy, ptr_to_ind));
-        auto ptr_to_node_on_ind_minus_1 = PointerAdd(this, ptr_to_node_on_ind, -1);
-        StoreStackNode(this, LoadFromAppNode(this, ptr_to_node_on_ind_minus_1, 1), ptr_to_node_on_ind);
-        builder.CreateStore(builder.CreateAdd(builder.CreateLoad(IntTy, ptr_to_ind), ConstantInt(this, 1)), ptr_to_ind);
-        auto cond = builder.CreateICmpSLT(builder.CreateLoad(IntTy, ptr_to_ind), UnwindFunc->arg_begin());
-        builder.CreateCondBr(cond, loop_block, ret_block);
+        auto PrintF = 
+        module.getOrInsertFunction(
+        "printf",
+        llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(ctx), 
+        llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 
+        0), true /* this is var arg func type*/) 
+        );
+        std::cout << "#6\n";
+        llvm::Constant* formatStr = builder.CreateGlobalStringPtr("%ld\n", "formatStr");
+        std::cout << "#7\n";
+        builder.CreateCall(PrintF, {formatStr, LoadFromConstantNode(this, LoadStackNode(this, stack_top), _INT)});
+        std::cout << "#8\n";
+        builder.CreateRet(builder.getInt32(0));
+        std::cout << "#9\n";
     }
-    //UNPACK END
+    //MAIN END
+    std::cout << "#1.4\n";
+    for (auto f : sub_funcs) {
+        f.second->compile_definition();
+    }
+    for (auto f : sub_funcs) {
+        f.second->compile_body();
+    }
+    std::cout << "#1.5\n";
 }

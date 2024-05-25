@@ -1,3 +1,4 @@
+#include "visitor.h"
 #include <ast/ast.h>
 #include <ast/SC.h>
 #include <cassert>
@@ -91,4 +92,11 @@ std::shared_ptr<Node> LambdaNode::EtaConversion() {
 std::weak_ptr<LambdaNode> LambdaNode::GetHead() { 
     if (ind_tag) return body->GetHead();
     throw WAE("GetHead"); 
+}
+
+void LambdaNode::accept(Visitor& x) const {
+    if (ind_tag) {
+        return body->accept(x);
+    }
+    x.visit(*this);
 }

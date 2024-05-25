@@ -1,9 +1,10 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs")
+
 ################################
 # Defining tests
 ################################
 
-add_executable(tests ast_test.cpp SC_test.cpp)
+add_executable(tests ast_test.cpp SC_test.cpp compiling_tests.cpp)
 
 ################################
 # Unit Tests
@@ -16,8 +17,14 @@ create_coverage_target(tests_cov)
 add_library(test_helper help.cpp)
 add_library(printer printer.cpp)
 
+target_link_libraries(tests gtest_main)
+target_link_libraries(tests gtest)
 target_link_libraries(tests grammar)
+target_link_libraries(tests ast)
+target_link_libraries(tests translator)
 target_link_libraries(tests test_helper)
 target_link_libraries(tests printer)
+target_link_libraries(tests translator)
+target_link_libraries(tests ${LLVM_LIBS})
 
 add_test_target(tests_cov tests)

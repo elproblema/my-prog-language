@@ -16,4 +16,5 @@ struct Visitor {
     virtual void visit(const BIFNode&) = 0;
     virtual void visit(const AppNode&) = 0;
     virtual void visit(const ConstNode&) = 0;
+    virtual bool skip_ind_nodes() = 0;
 };

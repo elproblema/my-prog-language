@@ -1,14 +1,12 @@
 #pragma once
-#include <llvm-18/llvm/IR/Function.h>
-#include <llvm-18/llvm/IR/GlobalVariable.h>
-#include <llvm-18/llvm/IR/Type.h>
-#include <llvm-18/llvm/IR/Value.h>
+#include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <map>
-#include <memory>
 #include <string>
 
 #include <ast/SC.h>
@@ -18,16 +16,14 @@ enum TAG : char {
     CONST_INT,
     CONST_FLOAT,
     CONST_CHAR,
-    FUNC,
-    VAR,
-    IND
+    FUNC
 };
 
 enum PosInConst : uint32_t {
     TAG=0,
-    INT,
-    DOUBLE,
-    CHAR,
+    _INT,
+    _DOUBLE,
+    _CHAR,
 };
 
 struct FuncSubstitution;
@@ -43,6 +39,7 @@ struct GMachineState {
     llvm::Type* IntTy;
     llvm::Type* DoubleTy;
     llvm::Type* CharTy;
+    llvm::FunctionType* SubFuncTy;
 
     llvm::StructType* StackNodeTy;
     llvm::PointerType* StackPtrTy;
@@ -50,9 +47,10 @@ struct GMachineState {
 
     llvm::Function* UnwindFunc;
     llvm::Function* UnpackFunc;
+    llvm::Function* Main;
 
     // this has nothing similar to llvm context
-    struct context {
+    struct Context {
         GMachineState* state;
         // (var -> pos) where pos is pointer to parameter offset relative to root on the stack
         std::map<std::string, size_t> symb_table; 
@@ -76,23 +74,5 @@ struct GMachineState {
 
     void InitGlobal();
 
-    void PrepareToExecute();
-
     GMachineState();
-};
-
-//this struct contains of function that can create body of SuperCombinator comb
-//with given parameteres on the stack
-struct FuncSubstitution {
-    GMachineState* st;
-    std::shared_ptr<SuperCombinator> comb;
-    llvm::FunctionType* sub_func_type;
-    llvm::Function* sub_func;
-
-    FuncSubstitution(GMachineState* st, std::shared_ptr<SuperCombinator> comb):
-    st(st), comb(comb), 
-    sub_func_type(llvm::FunctionType::get(llvm::Type::getVoidTy(st->ctx), {}, false)),
-    sub_func(llvm::Function::Create(sub_func_type, llvm::Function::ExternalLinkage, comb->GetName())) {}
-
-    void compile_body();
 };

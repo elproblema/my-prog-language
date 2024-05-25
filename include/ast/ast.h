@@ -16,6 +16,8 @@ class VarNode;
 
 class LambdaNode;
 
+using value_type = std::variant<long long, long double, char>;
+
 // Node instance associated with some lambda expression
 class Node : public std::enable_shared_from_this<Node> {
 
@@ -78,13 +80,13 @@ class Position {
     virtual bool IsFunc() const { return false; }
     virtual std::shared_ptr<Node> EtaConversion() { throw WAE("EtaConversion"); }
     virtual std::weak_ptr<LambdaNode> GetHead() { throw WAE("GetHead"); }
+    virtual const value_type& GetConstValue() const { throw WAE("GetConstValue"); }
 
     virtual ~Node() = default;
 };
 
 // Associated with expression that consists of constant
 class ConstNode : public Node {
-    using value_type = std::variant<long long, long double, char>;
     // There "value" is semantic value of constant expression
     value_type value;
 
@@ -99,6 +101,7 @@ class ConstNode : public Node {
 
     void accept(Visitor& x) const override { x.visit(*this); }
 
+    const value_type& GetConstValue() const override { return value; }
 
     ~ConstNode() = default;
 };
@@ -188,7 +191,7 @@ class LambdaNode : public VarNode {
   public:
     LambdaNode(VarNode&& var, std::shared_ptr<Node> body);
 
-    void accept(Visitor& x) const override { x.visit(*this); }
+    void accept(Visitor& x) const override;
     void SetIndirected() { ind_tag = true; }
     bool GetIndTag() const { return ind_tag; }
 

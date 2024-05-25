@@ -1,19 +1,21 @@
+project(Compiler)
 cmake_minimum_required(VERSION 3.22)
 
 find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
 find_package(LLVM REQUIRED CONFIG)
 
-llvm_map_components_to_libnames(LLVM_LIBS core codegen)
+llvm_map_components_to_libnames(LLVM_LIBS core x86asmparser x86codegen)
 include_directories(${LLVM_INCLUDE_DIRS})
 
-set(CMAKE_CXX_COMPILER clang++)
-set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER /usr/bin/c++)
+set(CMAKE_C_COMPILER /usr/bin/cc)
 
 set(cov_flags "-g -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "-Wno-unused-value ${LLVM_DEFINITIONS}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+#-fuse-ld=lld
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 set(CMAKE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 

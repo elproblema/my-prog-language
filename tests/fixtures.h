@@ -61,3 +61,10 @@ struct rebuild : ast {
         yydebug = 0;
     }
 };
+
+struct compile : rebuild {
+
+    void SetUp() {
+        rebuild::SetUp();
+    }
+};

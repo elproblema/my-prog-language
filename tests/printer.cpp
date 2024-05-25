@@ -52,4 +52,5 @@ struct Printer : public Visitor {
         std::cout << "ConstNode\n" << std::endl;
         std::cout << "up" << std::endl;
     }
+    bool skip_ind_nodes() override { return false; }
 };
