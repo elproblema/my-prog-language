@@ -45,8 +45,6 @@ struct GMachineState {
     llvm::PointerType* StackPtrTy;
     llvm::PointerType* NodePtrTy;
 
-    llvm::Function* UnwindFunc;
-    llvm::Function* UnpackFunc;
     llvm::Function* Main;
 
     // this has nothing similar to llvm context

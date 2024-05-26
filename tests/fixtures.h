@@ -66,5 +66,10 @@ struct compile : rebuild {
 
     void SetUp() {
         rebuild::SetUp();
+        freopen("compile.ll", "w", stdout);
+    }
+
+    void TearDown() {
+        freopen("dontcare", "w", stdout);
     }
 };

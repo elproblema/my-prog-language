@@ -13,8 +13,7 @@ struct FuncSubstitution {
     llvm::Function* sub_func;
 
     FuncSubstitution(GMachineState* st, std::shared_ptr<SuperCombinator> comb):
-    st(st), comb(comb), 
-    sub_func(llvm::Function::Create(st->SubFuncTy, llvm::Function::ExternalLinkage, comb->GetFuncName())) {}
+    st(st), comb(comb) {}
 
     void compile_body();
 

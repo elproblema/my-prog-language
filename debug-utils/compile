@@ -1,0 +1,4 @@
+#!/bin/bash
+llc -relocation-model=pic -filetype=obj compile.ll -o example.o
+gcc -pie example.o -o example
+./example

@@ -2,9 +2,7 @@
 #include <ast/ast.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
-#include <variant>
 #include <visitor.h>
-
 
 #include <llvm/g-adapter.h>
 #include <llvm/g-commands.h>
@@ -12,12 +10,19 @@
 #include <llvm/g-sub.h>
 
 void FuncSubstitution::compile_definition() {
-    sub_func = llvm::Function::Create(st->SubFuncTy, llvm::Function::ExternalLinkage, comb->GetFuncName());
+    sub_func = llvm::Function::Create(
+    st->SubFuncTy,
+    llvm::Function::ExternalLinkage,
+    comb->GetFuncName(),
+    st->module
+    );
     st->sub_funcs[comb->GetFuncName()] = this;
 }
 
 void FuncSubstitution::compile_body() {
-    llvm::BasicBlock::Create(st->ctx, "entry", sub_func);
+    auto entry = llvm::BasicBlock::Create(st->ctx, "entry", sub_func);
+    st->builder.SetInsertPoint(entry);
+    DebugPrint(st, "Got into " + comb->GetFuncName());
     std::map<std::string, size_t> symb_table;
     size_t i = 0;
     size_t n = comb->GetSomeVars().size();
@@ -25,23 +30,20 @@ void FuncSubstitution::compile_body() {
         symb_table[var.lock()->GetName()] = i++;
     }
     VisitorCompiler compiler = VisitorCompiler(GMachineState::Context(st, symb_table, n));
-    comb->accept(compiler);
+    comb->GetBody()->accept(compiler);
     GCode::Slide(n + 1).adapt(&compiler.c);
-    GCode::Unwind().adapt(st);
+    GCode::Unwind().Call(st);
+    DebugPrint(st, "done " + comb->GetFuncName());
+    DebugPrintLL(st, "const val in done", LoadFromConstantNode(st, LoadStackNode(st, LoadStackTop(st)), _INT));
+    st->builder.CreateRetVoid();
 }
 
 void VisitorCompiler::visit(const ConstNode& v) {
     auto st = c.state;
-    auto value = v.GetConstValue();
+    auto value = v.GetLL();
 
-    if (std::holds_alternative<long long>(value)) {
-        GCode::PushValue(std::get<long long>(value)).adapt_int(&c);
-    } else if (std::holds_alternative<long double>(value)) {
-        GCode::PushValue(std::get<long double>(value)).adapt_float(&c);
-    } else if (std::holds_alternative<char>(value)) {
-        GCode::PushValue(std::get<char>(value)).adapt_char(&c);
-    }
-
+    GCode::PushInt(value).adapt(&c);
+    DebugPrint(c.state, "after pushint");
 }
 
 void VisitorCompiler::visit(const VarNode& v) {

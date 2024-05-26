@@ -15,25 +15,14 @@
 #include <llvm/llvm-shortcuts.h>
 #include <llvm/g-sub.h>
 
-#include <iostream>
-
 extern SC_container all_functions;
 
 GMachineState::GMachineState(): 
 builder(ctx), module("main", ctx)
 {
-    std::cout << "#1\n";
     DefineTypes();
-    std::cout << "#2\n";
-    for (auto f : all_functions) std::cout << f->GetFuncName() << "\n";
-    for (auto f : all_functions) {
-        sub_funcs[f->GetFuncName()] = new FuncSubstitution(this, f);
-    }
-    std::cout << "#3\n";
     InitGlobal();
-    std::cout << "#4\n";
     DefineFunctions();
-    std::cout << "#5\n";
 }
 
 void GMachineState::DefineTypes() {
@@ -44,16 +33,16 @@ void GMachineState::DefineTypes() {
     SubFuncTy = llvm::FunctionType::get(VoidTy, false);
 
     NodePtrTy = llvm::PointerType::getUnqual(IntTy);
-    StackNodeTy = llvm::StructType::create(NodePtrTy);
+    StackNodeTy = llvm::StructType::create(NodePtrTy, "stack_node");
     StackPtrTy = llvm::PointerType::getUnqual(StackNodeTy);
 
     TagTy = llvm::Type::getInt8Ty(ctx);
 
     std::vector<llvm::Type *> Values = {
     TagTy, 
-    llvm::PointerType::getUnqual(IntTy),
-    llvm::PointerType::getUnqual(DoubleTy),
-    llvm::PointerType::getUnqual(CharTy)
+    IntTy,
+    DoubleTy,
+    CharTy
     };
 
     ConstantNodeTy = llvm::StructType::create(Values, "constant_node");
@@ -67,7 +56,7 @@ void GMachineState::DefineTypes() {
         {
         TagTy, 
         IntTy,
-        llvm::PointerType::getUnqual(SubFuncTy)
+        SubFuncTy->getPointerTo()
         }, "func_node"
     );
     IndNodeTy = llvm::StructType::create({TagTy, NodePtrTy});
@@ -79,55 +68,51 @@ void GMachineState::InitGlobal() {
         StackPtrTy,             
         false,                 
         llvm::GlobalValue::ExternalLinkage, 
-        nullptr,            
+        llvm::ConstantPointerNull::get(StackPtrTy),            
         "stack_top"        
     );
 }
 
 void GMachineState::DefineFunctions() {
-    std::cout << "#1.1\n";
+    for (auto f : all_functions) {
+        (new FuncSubstitution(this, f))->compile_definition();
+    }
     {
         llvm::FunctionType* mainFunctionType = llvm::FunctionType::get(builder.getInt32Ty(), false);
         Main = llvm::Function::Create(mainFunctionType, llvm::Function::ExternalLinkage, "main", module);
     }
+
+    GCode::Unwind::Init(this);
+    GCode::Eval::Init(this);
     
-    std::cout << "#1.3\n";
     //MAIN START
     {
         llvm::BasicBlock* entry = llvm::BasicBlock::Create(ctx, "entry", Main);
         builder.SetInsertPoint(entry);
-        std::cout << "#1\n";
-        builder.CreateLoad(StackNodeTy, builder.CreateAlloca(StackNodeTy, 1000000), "init_stack");
-        std::cout << "#2\n";
+        DebugPrint(this, "#1\n");
+        StoreStackTop(this, builder.CreateAlloca(StackNodeTy, ConstantInt(this, 1000000)));
+        DebugPrint(this, "#2\n");
         GMachineState::Context c(this, {}, 0);
-        std::cout << "#3\n";
         GCode::PushGlobal("PROG").adapt(&c);
-        std::cout << "#4\n";
+        DebugPrint(this, "#3\n");
         GCode::Eval().Call(this);
-        std::cout << "#5\n";
+        DebugPrintLL(this, "const val out of eval call", LoadFromConstantNode(this, LoadStackNode(this, LoadStackTop(this)), _INT));
+
 
         auto PrintF = 
         module.getOrInsertFunction(
         "printf",
         llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(ctx), 
-        llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 
-        0), true /* this is var arg func type*/) 
+        llvm::Type::getInt8Ty(ctx)->getPointerTo(), true /* this is var arg func type*/) 
         );
-        std::cout << "#6\n";
-        llvm::Constant* formatStr = builder.CreateGlobalStringPtr("%ld\n", "formatStr");
-        std::cout << "#7\n";
-        builder.CreateCall(PrintF, {formatStr, LoadFromConstantNode(this, LoadStackNode(this, stack_top), _INT)});
-        std::cout << "#8\n";
+        llvm::Constant* formatStr = builder.CreateGlobalStringPtr("%lld\n", "formatStr");
+        DebugPrint(this, "before print\n");
+        DebugPrintLL(this, "const val", LoadStackTop(this));
+        builder.CreateCall(PrintF, {formatStr, LoadFromConstantNode(this, LoadStackNode(this, LoadStackTop(this)), _INT)});
         builder.CreateRet(builder.getInt32(0));
-        std::cout << "#9\n";
     }
     //MAIN END
-    std::cout << "#1.4\n";
-    for (auto f : sub_funcs) {
-        f.second->compile_definition();
+    for (auto el : sub_funcs) {
+        el.second->compile_body();
     }
-    for (auto f : sub_funcs) {
-        f.second->compile_body();
-    }
-    std::cout << "#1.5\n";
 }

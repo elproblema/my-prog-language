@@ -1,0 +1,6 @@
+#!/bin/bash
+make
+../bin/tests
+llc -relocation-model=pic -filetype=obj compile.ll -o example.o
+gcc -pie example.o -o example
+./example
